@@ -112,13 +112,11 @@ export const onRequestPost: PagesFunction<{
 
 		const { credentialPublicKey, credentialID, counter } =
 			verification.registrationInfo as any;
-		const credIdB64 = toBase64Url(credentialID);
+		const credIdFromClient = String(body?.response?.id || "");
+		const credIdB64 = credIdFromClient || toBase64Url(credentialID);
 		const pubKeyB64 = toBase64Url(credentialPublicKey);
 		const safeCounter =
 			typeof counter === "number" && Number.isFinite(counter) ? counter : 0;
-		if (!credIdB64 || !pubKeyB64) {
-			return new Response("invalid credential data", { status: 400 });
-		}
 		await db.batch([
 			db
 				.prepare("INSERT OR IGNORE INTO users (id, email) VALUES (?, ?)")
