@@ -6,10 +6,46 @@ import { todayString, useAppState } from './state';
 import MoodSelector from './components/MoodSelector';
 import Input from './components/ui/Input';
 import Quarterly from './components/pages/Quarterly';
+import Button from './components/ui/Button';
+import { finishServerLogin, startServerLogin } from './lib/webauthn';
+import Register from './components/pages/Register';
 
 export default function App() {
     const [tab, setTab] = useState<TabKey>('week');
     const container = 'mx-auto max-w-4xl';
+    const ui = useAppState((s) => s.ui);
+    const locked = useAppState((s) => s.locked);
+    const setLocked = useAppState((s) => s.setLocked);
+    // const user = useAppState((s) => s.user);
+    const [path, setPath] = React.useState<string>(location.pathname);
+
+    React.useEffect(() => {
+        const onPop = () => setPath(location.pathname);
+        window.addEventListener('popstate', onPop);
+        return () => window.removeEventListener('popstate', onPop);
+    }, []);
+
+    React.useEffect(() => {
+        if (ui.passkeyEnabled && ui.passkeyCredentialId && locked !== false) {
+            setLocked(true);
+        }
+    }, [ui.passkeyEnabled, ui.passkeyCredentialId]);
+
+    if (ui.passkeyEnabled && (locked ?? false)) {
+        return (
+            <div className="min-h-screen flex items-center justify-center p-6">
+                <div className="w-full max-w-sm rounded-xl border border-neutral-200 p-6 text-center dark:border-neutral-800">
+                    <div className="mb-2 text-sm text-neutral-500">Private mode</div>
+                    <h1 className="mb-4 text-xl font-semibold">Unlock with passkey</h1>
+                    <LoginWithPasskey onUnlocked={() => setLocked(false)} />
+                </div>
+            </div>
+        );
+    }
+
+    if (path === '/register') {
+        return <Register />;
+    }
 
     return (
         <div className="min-h-screen">
@@ -44,6 +80,40 @@ export default function App() {
             <footer className="px-4 pb-10 text-center text-xs text-neutral-400">
                 Built for minimalism, simplicity, productivity, and mindfulness. Your data stays on this device. iCloud sync planned.
             </footer>
+        </div>
+    );
+}
+
+function LoginWithPasskey({ onUnlocked }: { onUnlocked: () => void }) {
+    const [email, setEmail] = React.useState('');
+    const [loading, setLoading] = React.useState(false);
+    return (
+        <div className="space-y-3">
+            <input
+                className="w-full rounded-md border border-neutral-300 bg-white px-3 py-2 text-sm dark:border-neutral-700 dark:bg-neutral-900"
+                placeholder="Email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+            />
+            <Button
+                onClick={async () => {
+                    setLoading(true);
+                    try {
+                        const { userId, options } = await startServerLogin(email.trim());
+                        const cred = (await navigator.credentials.get({ publicKey: options })) as PublicKeyCredential | null;
+                        if (!cred) throw new Error('Cancelled');
+                        await finishServerLogin(userId, email.trim(), cred);
+                        onUnlocked();
+                    } catch (e: any) {
+                        alert(e?.message ?? 'Login failed');
+                    } finally {
+                        setLoading(false);
+                    }
+                }}
+                disabled={loading || !email.trim()}
+            >
+                {loading ? 'Authenticating…' : 'Use passkey'}
+            </Button>
         </div>
     );
 }

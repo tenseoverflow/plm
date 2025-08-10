@@ -255,28 +255,6 @@ export default function Week() {
                                             )}
                                         </div>
 
-                                        {dayHabits.length > 0 && (
-                                            <div className="mb-3 space-y-1">
-                                                <div className="text-neutral-500 text-xs">Habits</div>
-                                                <ul className="space-y-1">
-                                                    {dayHabits.map((h) => {
-                                                        const done = Array.isArray(h.completions) && h.completions.includes(dateStr);
-                                                        return (
-                                                            <li key={h.id} className="flex items-center justify-between">
-                                                                <label className="flex items-center gap-2">
-                                                                    <Checkbox
-                                                                        checked={!!done}
-                                                                        onChange={() => toggleHabitForDate(h.id, dateStr)}
-                                                                    />
-                                                                    <span className="text-[13px]">{h.name}</span>
-                                                                </label>
-                                                            </li>
-                                                        );
-                                                    })}
-                                                </ul>
-                                            </div>
-                                        )}
-
                                         <AddInline onAdd={(title) => addTask(dateStr, title)} placeholder="Add a task" />
 
                                         {tasks.length > 3 && (
@@ -300,6 +278,29 @@ export default function Week() {
                                                 />
                                             ))}
                                         </ul>
+
+                                        {dayHabits.length > 0 && (
+                                            <div className="mb-3 space-y-1">
+                                                <div className="text-neutral-500 text-xs">Habits</div>
+                                                <ul className="space-y-1">
+                                                    {dayHabits.map((h) => {
+                                                        const done = Array.isArray(h.completions) && h.completions.includes(dateStr);
+                                                        return (
+                                                            <li key={h.id} className="flex items-center justify-between">
+                                                                <label className="flex items-center gap-2">
+                                                                    <Checkbox
+                                                                        checked={!!done}
+                                                                        onChange={() => toggleHabitForDate(h.id, dateStr)}
+                                                                    />
+                                                                    <span className="text-[13px]">{h.name}</span>
+                                                                </label>
+                                                            </li>
+                                                        );
+                                                    })}
+                                                </ul>
+                                            </div>
+                                        )}
+
                                     </Card>
                                 );
                             })}

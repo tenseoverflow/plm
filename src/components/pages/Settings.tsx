@@ -1,6 +1,8 @@
 import React, { useRef, useState } from 'react';
 import { HabitSchedule, useAppState } from '../../state';
 import Input from '../ui/Input';
+import Button from '../ui/Button';
+import { authenticatePasskey, registerPasskey } from '../../lib/webauthn';
 
 export default function Settings() {
     const state = useAppState();
@@ -12,6 +14,7 @@ export default function Settings() {
 
     const ui = useAppState((s) => s.ui);
     const setUi = useAppState((s) => s.setUi);
+    const setLocked = useAppState((s) => s.setLocked);
 
     const habits = useAppState((s) => s.habits);
     const addHabit = useAppState((s) => s.addHabit);
@@ -46,17 +49,68 @@ export default function Settings() {
 
     return (
         <div className="space-y-8">
-            <section className="space-y-1">
-                <div className="text-sm text-neutral-500">Appearance</div>
-                <p className="text-sm text-neutral-600 dark:text-neutral-400">Theme adapts to your device preference automatically.</p>
-            </section>
-
             <section className="space-y-2">
                 <div className="text-sm text-neutral-500">Week view</div>
                 <label className="flex w-fit cursor-pointer items-center gap-3 rounded-md border border-neutral-200 px-3 py-2 dark:border-neutral-800">
                     <input type="checkbox" checked={showMindfulness} onChange={(e) => setShowMindfulness(e.target.checked)} />
                     <span>Show mood and intention on days</span>
                 </label>
+            </section>
+
+            <section className="space-y-3">
+                <div className="text-sm text-neutral-500">Privacy</div>
+                <div className="space-y-2 rounded-md border border-neutral-200 p-3 dark:border-neutral-800">
+                    <div className="text-sm font-medium">Passkey lock</div>
+                    <p className="text-xs text-neutral-500">Protect access to the app with a device passkey (WebAuthn). Your data remains local.</p>
+                    {!ui.passkeyEnabled ? (
+                        <div className="flex items-center gap-2">
+                            <Button
+                                onClick={async () => {
+                                    try {
+                                        const id = await registerPasskey('PLM');
+                                        setUi({ passkeyEnabled: true, passkeyCredentialId: id });
+                                        alert('Passkey registered. The app will lock on next load.');
+                                    } catch (e: any) {
+                                        alert(e?.message ?? 'Failed to register passkey');
+                                    }
+                                }}
+                            >
+                                Enable passkey
+                            </Button>
+                        </div>
+                    ) : (
+                        <div className="flex flex-wrap items-center gap-2 text-sm">
+                            <span className="text-neutral-600 dark:text-neutral-300">Passkey is enabled.</span>
+                            <Button
+                                variant="outline"
+                                onClick={() => {
+                                    if (confirm('Disable passkey protection?')) setUi({ passkeyEnabled: false, passkeyCredentialId: undefined });
+                                }}
+                            >
+                                Disable
+                            </Button>
+                            <Button
+                                variant="ghost"
+                                onClick={async () => {
+                                    try {
+                                        if (!ui.passkeyCredentialId) throw new Error('No credential ID');
+                                        const ok = await authenticatePasskey(ui.passkeyCredentialId);
+                                        if (ok) {
+                                            setLocked(false);
+                                            alert('Unlocked');
+                                        } else {
+                                            alert('Failed to unlock');
+                                        }
+                                    } catch (e: any) {
+                                        alert(e?.message ?? 'Authentication failed');
+                                    }
+                                }}
+                            >
+                                Test unlock
+                            </Button>
+                        </div>
+                    )}
+                </div>
             </section>
 
             <section className="space-y-3">
@@ -239,50 +293,4 @@ export default function Settings() {
     );
 }
 
-function ScheduleEditorInline({ schedule, onChange }: { schedule: HabitSchedule; onChange: (s: HabitSchedule) => void }) {
-    const [mode, setMode] = useState<HabitSchedule['type']>(schedule.type);
-    const [customDays, setCustomDays] = useState<number[]>(schedule.daysOfWeek ?? []);
-    const DAY_LABELS = ['S', 'M', 'T', 'W', 'T', 'F', 'S'];
-
-    function setType(t: HabitSchedule['type']) {
-        setMode(t);
-        if (t === 'daily') onChange({ type: 'daily' });
-        else if (t === 'weekdays') onChange({ type: 'weekdays' });
-        else onChange({ type: 'custom', daysOfWeek: customDays });
-    }
-
-    function toggleDay(d: number) {
-        const next = customDays.includes(d) ? customDays.filter((x) => x !== d) : [...customDays, d];
-        setCustomDays(next);
-        onChange({ type: 'custom', daysOfWeek: next.sort() });
-    }
-
-    return (
-        <div className="flex flex-wrap items-center gap-2 text-xs">
-            <div className="flex overflow-hidden rounded-md border border-neutral-300 dark:border-neutral-700">
-                {['daily', 'weekdays', 'custom'].map((t) => (
-                    <button
-                        key={t}
-                        onClick={() => setType(t as HabitSchedule['type'])}
-                        className={`px-2 py-1 ${mode === t ? 'bg-calm-600 text-white' : 'bg-white text-neutral-600 dark:bg-neutral-900 dark:text-neutral-300'}`}
-                    >
-                        {t}
-                    </button>
-                ))}
-            </div>
-            {mode === 'custom' && (
-                <div className="flex items-center gap-1">
-                    {DAY_LABELS.map((label, idx) => (
-                        <button
-                            key={idx}
-                            onClick={() => toggleDay(idx)}
-                            className={`h-7 w-7 rounded-full text-center ${customDays.includes(idx) ? 'bg-calm-500 text-white' : 'bg-neutral-200 dark:bg-neutral-800 text-neutral-700 dark:text-neutral-300'}`}
-                        >
-                            {label}
-                        </button>
-                    ))}
-                </div>
-            )}
-        </div>
-    );
-}
+// Note: ScheduleEditorInline has been inlined above in the Habits section.

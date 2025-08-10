@@ -1,6 +1,5 @@
 import React, { useMemo, useState } from 'react';
 import { quarterKey, startOfWeekString, useAppState } from '../../state';
-import Input from '../ui/Input';
 import Card from '../ui/Card';
 
 function computeQuarterKey(date: Date) {
@@ -30,19 +29,19 @@ export default function Quarterly() {
     const [reportDraft, setReportDraft] = useState(report);
 
     const title = useMemo(() => {
-        const d = parseQuarterKey(selectedKey);
         const [year, q] = selectedKey.split('-');
         return `Quarter ${q.replace('Q', '')}, ${year}`;
     }, [selectedKey]);
 
-    function saveItem(i: number, title: string, notes?: string) {
-        setQuarterItem(selectedKey, i, title, notes);
+    function saveItem(i: number, notes: string) {
+        setQuarterItem(selectedKey, i, notes);
     }
 
     function addFocus() {
-        const list = items.slice(0, 4);
-        const firstEmpty = list.findIndex((x) => !x || !x.title);
-        const idx = firstEmpty >= 0 ? firstEmpty : list.length < 4 ? list.length : -1;
+        const list = (items.slice(0, 4) as (typeof items[number] | null)[]);
+        // find first null slot
+        const firstNull = list.findIndex((x) => x == null);
+        const idx = firstNull >= 0 ? firstNull : list.length < 4 ? list.length : -1;
         if (idx >= 0) saveItem(idx, '');
     }
 
@@ -73,7 +72,8 @@ export default function Quarterly() {
 
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                 {Array.from({ length: 4 }, (_, i) => i).map((i) => {
-                    const item = items[i] ?? { id: `q_${i}`, title: '', notes: '' };
+                    const item = (items[i] ?? null) as { id: string; title: string; notes?: string } | null;
+                    if (item == null) return null;
                     return (
                         <Card key={i} className="p-3">
                             <div className="flex items-center justify-between">
@@ -82,15 +82,9 @@ export default function Quarterly() {
                                     <button onClick={() => removeFocus(i)} className="text-neutral-400 hover:text-neutral-600 dark:hover:text-neutral-200">✕</button>
                                 </div>
                             </div>
-                            <Input
-                                value={item.title}
-                                onChange={(e) => saveItem(i, e.target.value, item.notes)}
-                                placeholder="Focus (optional title)"
-                                className="mt-2"
-                            />
                             <textarea
                                 value={item.notes ?? ''}
-                                onChange={(e) => saveItem(i, item.title, e.target.value)}
+                                onChange={(e) => saveItem(i, e.target.value)}
                                 rows={4}
                                 placeholder="Notes / scope / definition of done"
                                 className="mt-2 w-full rounded-md border border-neutral-200 bg-white p-2 text-sm dark:border-neutral-800 dark:bg-neutral-900"
@@ -100,7 +94,7 @@ export default function Quarterly() {
                 })}
             </div>
             <div>
-                <button onClick={addFocus} className="rounded-md bg-calm-600 px-3 py-2 text-sm text-white disabled:opacity-50" disabled={(items.filter(Boolean).length ?? 0) >= 4}>Add focus</button>
+                <button onClick={addFocus} className="rounded-md bg-calm-600 px-3 py-2 text-sm text-white disabled:opacity-50" disabled={((items.filter(Boolean).length) ?? 0) >= 4}>Add focus</button>
             </div>
 
             <div className="space-y-2">

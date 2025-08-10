@@ -51,12 +51,21 @@ export type FocusDefaults = {
 
 export type QuarterItem = { id: string; title: string; notes?: string };
 
+export type User = {
+	id: string;
+	name: string;
+	credentialId?: string; // base64url
+};
+
 export type UiPreferences = {
 	showMindfulnessInWeek: boolean;
 	soundEnabled: boolean;
 	notificationsEnabled: boolean;
 	autoStartNextSegment: boolean;
 	focusDefaults: FocusDefaults;
+	// Passkey lock
+	passkeyEnabled?: boolean;
+	passkeyCredentialId?: string; // base64url
 };
 
 export type AppState = {
@@ -73,12 +82,16 @@ export type AppState = {
 	focusSessions: FocusSession[];
 
 	// Quarterly plan keyed by quarter key e.g., 2025-Q1
-	quarterPlans: Record<string, QuarterItem[]>;
+	quarterPlans: Record<string, (QuarterItem | null)[]>;
 
 	// Weekly reports keyed by Monday start date YYYY-MM-DD
 	weeklyReportsByWeekStart: Record<string, string | undefined>;
 
 	ui: UiPreferences;
+	// ephemeral lock flag (not persisted separately; derived from ui + last unlock)
+	locked?: boolean;
+
+	user: User | null;
 
 	// actions
 	setMood: (date: string, mood: MoodValue) => void;
@@ -103,16 +116,16 @@ export type AppState = {
 
 	setShowMindfulnessInWeek: (enabled: boolean) => void;
 	setUi: (partial: Partial<UiPreferences>) => void;
+	setLocked: (locked: boolean) => void;
+
+	// user actions
+	registerUser: (name: string, credentialId?: string) => void;
+	logoutUser: () => void;
 
 	addFocusSession: (seconds: number, label?: string, taskId?: string) => void;
 
 	// quarterly + weekly report actions
-	setQuarterItem: (
-		quarterKey: string,
-		index: number,
-		title: string,
-		notes?: string
-	) => void;
+	setQuarterItem: (quarterKey: string, index: number, notes: string) => void;
 	clearQuarterItem: (quarterKey: string, index: number) => void;
 	saveWeeklyReport: (weekStart: string, content: string) => void;
 
@@ -221,7 +234,7 @@ const defaultFocusDefaults: FocusDefaults = {
 
 export const useAppState = create<AppState>()(
 	persist(
-		(set, get) => ({
+		(set, _get) => ({
 			moodByDate: {},
 			intentionByDate: {},
 			tasksByDate: {},
@@ -237,7 +250,11 @@ export const useAppState = create<AppState>()(
 				notificationsEnabled: true,
 				autoStartNextSegment: true,
 				focusDefaults: defaultFocusDefaults,
+				passkeyEnabled: false,
+				passkeyCredentialId: undefined,
 			},
+			locked: false,
+			user: null,
 
 			setMood: (date, mood) =>
 				set((s) => ({ moodByDate: { ...s.moodByDate, [date]: mood } })),
@@ -397,6 +414,13 @@ export const useAppState = create<AppState>()(
 			setShowMindfulnessInWeek: (enabled) =>
 				set((s) => ({ ui: { ...s.ui, showMindfulnessInWeek: enabled } })),
 			setUi: (partial) => set((s) => ({ ui: { ...s.ui, ...partial } })),
+			setLocked: (locked) => set(() => ({ locked })),
+
+			registerUser: (name, credentialId) =>
+				set(() => ({
+					user: { id: generateId("user"), name: name.trim(), credentialId },
+				})),
+			logoutUser: () => set(() => ({ user: null })),
 
 			addFocusSession: (seconds, label, taskId) =>
 				set((s) => ({
@@ -413,30 +437,27 @@ export const useAppState = create<AppState>()(
 				})),
 
 			// quarterly + weekly report actions
-			setQuarterItem: (quarterKey, index, title, notes) =>
+			setQuarterItem: (quarterKey: string, index: number, notes: string) =>
 				set((s) => {
-					const list =
-						s.quarterPlans[quarterKey]?.slice(0, 4) ??
-						Array(4)
-							.fill(null)
-							.map(() => ({ id: generateId("q"), title: "" }));
-					const item = {
-						...(list[index] ?? { id: generateId("q") }),
-						title: title.trim(),
-						notes: notes?.trim(),
-					} as QuarterItem;
+					const existing = s.quarterPlans[quarterKey]?.slice(0, 4) ?? [];
+					const list: (QuarterItem | null)[] = Array.from(
+						{ length: 4 },
+						(_, i) => existing[i] ?? null
+					);
+					const base = list[index] ?? { id: generateId("q"), title: "" };
+					const item: QuarterItem = { ...base, notes: (notes ?? "").trim() };
 					const next = list.slice(0, 4);
 					next[index] = item;
 					return { quarterPlans: { ...s.quarterPlans, [quarterKey]: next } };
 				}),
-			clearQuarterItem: (quarterKey, index) =>
+			clearQuarterItem: (quarterKey: string, index: number) =>
 				set((s) => {
-					const list =
-						s.quarterPlans[quarterKey]?.slice(0, 4) ??
-						Array(4)
-							.fill(null)
-							.map(() => ({ id: generateId("q"), title: "" }));
-					list[index] = { id: generateId("q"), title: "" };
+					const existing = s.quarterPlans[quarterKey]?.slice(0, 4) ?? [];
+					const list: (QuarterItem | null)[] = Array.from(
+						{ length: 4 },
+						(_, i) => existing[i] ?? null
+					);
+					list[index] = null;
 					return { quarterPlans: { ...s.quarterPlans, [quarterKey]: list } };
 				}),
 			saveWeeklyReport: (weekStart, content) =>
@@ -464,7 +485,11 @@ export const useAppState = create<AppState>()(
 						notificationsEnabled: true,
 						autoStartNextSegment: true,
 						focusDefaults: defaultFocusDefaults,
+						passkeyEnabled: false,
+						passkeyCredentialId: undefined,
 					},
+					locked: false,
+					user: null,
 				})),
 		}),
 		{
