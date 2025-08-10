@@ -31,11 +31,19 @@ export default function History() {
         const list: string[] = [];
         const cursor = new Date();
         for (let i = 0; i < count; i += 1) {
-            list.push(todayString(cursor));
+            const d = todayString(cursor);
+            const hasMood = !!moodByDate[d];
+            const hasIntention = !!(intentionByDate[d] && intentionByDate[d]?.trim());
+            const hasTasks = (tasksByDate[d]?.length ?? 0) > 0;
+            const hasJournal = !!(journalByDate[d] && journalByDate[d]?.trim());
+            const hasFocus = focusSessions.some((f) => f.date === d);
+            if (hasMood || hasIntention || hasTasks || hasJournal || hasFocus) {
+                list.push(d);
+            }
             cursor.setDate(cursor.getDate() - 1);
         }
         return list;
-    }, [count]);
+    }, [count, moodByDate, intentionByDate, tasksByDate, journalByDate, focusSessions]);
 
     return (
         <Container>
