@@ -8,7 +8,6 @@ import Input from './components/ui/Input';
 import Quarterly from './components/pages/Quarterly';
 import Button from './components/ui/Button';
 import { finishServerLogin, startServerLogin } from './lib/webauthn';
-import Register from './components/pages/Register';
 
 export default function App() {
     const [tab, setTab] = useState<TabKey>('week');
@@ -17,13 +16,7 @@ export default function App() {
     const locked = useAppState((s) => s.locked);
     const setLocked = useAppState((s) => s.setLocked);
     // const user = useAppState((s) => s.user);
-    const [path, setPath] = React.useState<string>(location.pathname);
-
-    React.useEffect(() => {
-        const onPop = () => setPath(location.pathname);
-        window.addEventListener('popstate', onPop);
-        return () => window.removeEventListener('popstate', onPop);
-    }, []);
+    // Deprecated /register route removed; account is managed in Settings
 
     React.useEffect(() => {
         if (ui.passkeyEnabled && ui.passkeyCredentialId && locked !== false) {
@@ -41,10 +34,6 @@ export default function App() {
                 </div>
             </div>
         );
-    }
-
-    if (path === '/register') {
-        return <Register />;
     }
 
     return (

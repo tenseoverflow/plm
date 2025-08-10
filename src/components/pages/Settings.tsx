@@ -2,7 +2,7 @@ import React, { useRef, useState } from 'react';
 import { HabitSchedule, useAppState } from '../../state';
 import Input from '../ui/Input';
 import Button from '../ui/Button';
-import { startServerLogin, finishServerLogin } from '../../lib/webauthn';
+import { startServerLogin, finishServerLogin, startServerRegistration, finishServerRegistration } from '../../lib/webauthn';
 
 export default function Settings() {
     const state = useAppState();
@@ -15,6 +15,8 @@ export default function Settings() {
     const ui = useAppState((s) => s.ui);
     const setUi = useAppState((s) => s.setUi);
     const setLocked = useAppState((s) => s.setLocked);
+    const registerUser = useAppState((s) => s.registerUser);
+    const logoutUser = useAppState((s) => s.logoutUser);
 
     const habits = useAppState((s) => s.habits);
     const addHabit = useAppState((s) => s.addHabit);
@@ -22,7 +24,9 @@ export default function Settings() {
     const setHabitSchedule = useAppState((s) => s.setHabitSchedule);
 
     const [newHabit, setNewHabit] = useState('');
-    const [testEmail, setTestEmail] = useState('');
+    const [name, setName] = useState('');
+    const [email, setEmail] = useState('');
+    const [busy, setBusy] = useState(false);
 
     function exportData() {
         const blob = new Blob([JSON.stringify(state, null, 2)], { type: 'application/json' });
@@ -59,52 +63,65 @@ export default function Settings() {
             </section>
 
             <section className="space-y-3">
-                <div className="text-sm text-neutral-500">Privacy</div>
-                <div className="space-y-2 rounded-md border border-neutral-200 p-3 dark:border-neutral-800">
-                    <div className="text-sm font-medium">Passkey lock</div>
-                    <p className="text-xs text-neutral-500">Protect access to the app with a device passkey (WebAuthn).</p>
-                    {!ui.passkeyEnabled ? (
-                        <div className="flex items-center gap-2">
-                            <Button onClick={() => setUi({ passkeyEnabled: true })}>Enable passkey</Button>
+                <div className="text-sm text-neutral-500">Account</div>
+                <div className="space-y-3 rounded-md border border-neutral-200 p-3 dark:border-neutral-800">
+                    <div className="grid gap-2 sm:grid-cols-2">
+                        <div>
+                            <div className="text-xs text-neutral-500">Name</div>
+                            <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="Your name" />
                         </div>
-                    ) : (
-                        <div className="flex flex-wrap items-center gap-2 text-sm">
-                            <span className="text-neutral-600 dark:text-neutral-300">Passkey is enabled.</span>
-                            <Button
-                                variant="outline"
-                                onClick={() => {
-                                    if (confirm('Disable passkey protection?')) setUi({ passkeyEnabled: false });
-                                }}
-                            >
-                                Disable
-                            </Button>
-                            <Button
-                                variant="ghost"
-                                onClick={async () => {
-                                    try {
-                                        const email = testEmail.trim();
-                                        if (!email) throw new Error('Enter email below');
-                                        const { userId, options } = await startServerLogin(email);
-                                        const cred = (await navigator.credentials.get({ publicKey: options })) as PublicKeyCredential | null;
-                                        if (!cred) throw new Error('Cancelled');
-                                        await finishServerLogin(userId, email, cred);
-                                        setLocked(false);
-                                        alert('Unlocked');
-                                    } catch (e: any) {
-                                        alert(e?.message ?? 'Authentication failed');
-                                    }
-                                }}
-                            >
-                                Test unlock
-                            </Button>
-                            <input
-                                className="ml-2 w-64 rounded-md border border-neutral-300 bg-white px-2 py-1 text-sm dark:border-neutral-700 dark:bg-neutral-900"
-                                placeholder="Email for passkey"
-                                value={testEmail}
-                                onChange={(e) => setTestEmail(e.target.value)}
-                            />
+                        <div>
+                            <div className="text-xs text-neutral-500">Email</div>
+                            <Input value={email} onChange={(e) => setEmail(e.target.value)} placeholder="you@example.com" />
                         </div>
-                    )}
+                    </div>
+                    <div className="flex flex-wrap gap-2">
+                        <Button
+                            onClick={async () => {
+                                if (!email.trim() || !name.trim()) { alert('Enter name and email'); return; }
+                                setBusy(true);
+                                try {
+                                    const { userId, options } = await startServerRegistration(email.trim());
+                                    const cred = (await navigator.credentials.create({ publicKey: options })) as PublicKeyCredential | null;
+                                    if (!cred) throw new Error('Registration cancelled');
+                                    await finishServerRegistration(userId, email.trim(), cred);
+                                    registerUser(name.trim());
+                                    alert('Registered. You can now sign in with your passkey.');
+                                } catch (e: any) {
+                                    alert(e?.message ?? 'Registration failed');
+                                } finally { setBusy(false); }
+                            }}
+                            disabled={busy}
+                        >Register with passkey</Button>
+                        <Button
+                            variant="outline"
+                            onClick={async () => {
+                                if (!email.trim()) { alert('Enter email'); return; }
+                                setBusy(true);
+                                try {
+                                    const { userId, options } = await startServerLogin(email.trim());
+                                    const cred = (await navigator.credentials.get({ publicKey: options })) as PublicKeyCredential | null;
+                                    if (!cred) throw new Error('Cancelled');
+                                    await finishServerLogin(userId, email.trim(), cred);
+                                    setLocked(false);
+                                    alert('Signed in');
+                                } catch (e: any) {
+                                    alert(e?.message ?? 'Sign-in failed');
+                                } finally { setBusy(false); }
+                            }}
+                            disabled={busy}
+                        >Sign in with passkey</Button>
+                        <Button
+                            variant="ghost"
+                            onClick={async () => {
+                                try {
+                                    await fetch('/api/logout', { method: 'POST' });
+                                    logoutUser();
+                                    alert('Signed out');
+                                } catch { }
+                            }}
+                        >Sign out</Button>
+                    </div>
                 </div>
             </section>
 
