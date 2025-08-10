@@ -1,6 +1,8 @@
 import React from 'react';
 import ReactDOM from 'react-dom/client';
 import './index.css';
+import { loadRemote, scheduleSave } from './lib/sync';
+import { useAppState } from './state';
 import App from './App';
 
 function applySystemTheme() {
@@ -27,3 +29,21 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
         <App />
     </React.StrictMode>
 );
+
+// Attempt initial sync load after mount
+void (async () => {
+    try {
+        const data = await loadRemote();
+        if (data) {
+            const s = useAppState.getState();
+            useAppState.setState({ ...s, ...data });
+        }
+    } catch { }
+})();
+
+// Auto-sync on any state change (debounced)
+useAppState.subscribe((state) => {
+    try {
+        scheduleSave(state as any);
+    } catch { }
+});

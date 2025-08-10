@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
 	<head>
 		<meta charset="UTF-8" />
@@ -10,5 +10,16 @@
 	>
 		<div id="root"></div>
 		<script type="module" src="/src/main.tsx"></script>
+		<script>
+			// Simple client-side navigation for internal links
+			document.addEventListener('click', (e) => {
+				const a = e.target && (e.target as HTMLElement).closest && (e.target as HTMLElement).closest('a');
+				if (a && a.getAttribute('href') && a.getAttribute('href').startsWith('/')) {
+					e.preventDefault();
+					history.pushState({}, '', a.getAttribute('href'));
+					window.dispatchEvent(new Event('popstate'));
+				}
+			});
+		</script>
 	</body>
 </html>

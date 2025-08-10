@@ -1,0 +1,18 @@
+name = "plm"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "plm-db"
+database_id = "8ac89f01-df9d-43ec-80d3-34df70c3b699"
+
+[[kv_namespaces]]
+binding = "SESSIONS"
+id = "7658c8768e1647a3ba7f45bfe4bd4ede"
+
+[vars]
+RP_NAME = "PLM"
+# Set to your domain in production, e.g., "example.com"
+RP_ID = "plm.hen.ee"
+ORIGIN = "https://plm.hen.ee"
+JWT_SECRET = "change-me"
+

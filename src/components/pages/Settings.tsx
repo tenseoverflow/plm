@@ -2,7 +2,7 @@ import React, { useRef, useState } from 'react';
 import { HabitSchedule, useAppState } from '../../state';
 import Input from '../ui/Input';
 import Button from '../ui/Button';
-import { authenticatePasskey, registerPasskey } from '../../lib/webauthn';
+import { startServerLogin, finishServerLogin } from '../../lib/webauthn';
 
 export default function Settings() {
     const state = useAppState();
@@ -22,6 +22,7 @@ export default function Settings() {
     const setHabitSchedule = useAppState((s) => s.setHabitSchedule);
 
     const [newHabit, setNewHabit] = useState('');
+    const [testEmail, setTestEmail] = useState('');
 
     function exportData() {
         const blob = new Blob([JSON.stringify(state, null, 2)], { type: 'application/json' });
@@ -61,22 +62,10 @@ export default function Settings() {
                 <div className="text-sm text-neutral-500">Privacy</div>
                 <div className="space-y-2 rounded-md border border-neutral-200 p-3 dark:border-neutral-800">
                     <div className="text-sm font-medium">Passkey lock</div>
-                    <p className="text-xs text-neutral-500">Protect access to the app with a device passkey (WebAuthn). Your data remains local.</p>
+                    <p className="text-xs text-neutral-500">Protect access to the app with a device passkey (WebAuthn).</p>
                     {!ui.passkeyEnabled ? (
                         <div className="flex items-center gap-2">
-                            <Button
-                                onClick={async () => {
-                                    try {
-                                        const id = await registerPasskey('PLM');
-                                        setUi({ passkeyEnabled: true, passkeyCredentialId: id });
-                                        alert('Passkey registered. The app will lock on next load.');
-                                    } catch (e: any) {
-                                        alert(e?.message ?? 'Failed to register passkey');
-                                    }
-                                }}
-                            >
-                                Enable passkey
-                            </Button>
+                            <Button onClick={() => setUi({ passkeyEnabled: true })}>Enable passkey</Button>
                         </div>
                     ) : (
                         <div className="flex flex-wrap items-center gap-2 text-sm">
@@ -84,7 +73,7 @@ export default function Settings() {
                             <Button
                                 variant="outline"
                                 onClick={() => {
-                                    if (confirm('Disable passkey protection?')) setUi({ passkeyEnabled: false, passkeyCredentialId: undefined });
+                                    if (confirm('Disable passkey protection?')) setUi({ passkeyEnabled: false });
                                 }}
                             >
                                 Disable
@@ -93,14 +82,14 @@ export default function Settings() {
                                 variant="ghost"
                                 onClick={async () => {
                                     try {
-                                        if (!ui.passkeyCredentialId) throw new Error('No credential ID');
-                                        const ok = await authenticatePasskey(ui.passkeyCredentialId);
-                                        if (ok) {
-                                            setLocked(false);
-                                            alert('Unlocked');
-                                        } else {
-                                            alert('Failed to unlock');
-                                        }
+                                        const email = testEmail.trim();
+                                        if (!email) throw new Error('Enter email below');
+                                        const { userId, options } = await startServerLogin(email);
+                                        const cred = (await navigator.credentials.get({ publicKey: options })) as PublicKeyCredential | null;
+                                        if (!cred) throw new Error('Cancelled');
+                                        await finishServerLogin(userId, email, cred);
+                                        setLocked(false);
+                                        alert('Unlocked');
                                     } catch (e: any) {
                                         alert(e?.message ?? 'Authentication failed');
                                     }
@@ -108,6 +97,12 @@ export default function Settings() {
                             >
                                 Test unlock
                             </Button>
+                            <input
+                                className="ml-2 w-64 rounded-md border border-neutral-300 bg-white px-2 py-1 text-sm dark:border-neutral-700 dark:bg-neutral-900"
+                                placeholder="Email for passkey"
+                                value={testEmail}
+                                onChange={(e) => setTestEmail(e.target.value)}
+                            />
                         </div>
                     )}
                 </div>
