@@ -1,13 +1,13 @@
-import { useState, useEffect, FC } from 'react';
+import MoodSelector from '@components/MoodSelector';
 import TopNav, { TabKey } from '@components/TopNav';
+import Button from '@components/ui/Button';
+import Input from '@components/ui/Input';
+import { finishServerLogin, startServerLogin } from '@lib/webauthn';
 import History from '@pages/History';
+import Quarterly from '@pages/Quarterly';
 import Week from '@pages/Week';
 import { todayString, useAppState } from '@store/index';
-import MoodSelector from '@components/MoodSelector';
-import Input from '@components/ui/Input';
-import Quarterly from '@pages/Quarterly';
-import Button from '@components/ui/Button';
-import { finishServerLogin, startServerLogin } from '@lib/webauthn';
+import { FC, useEffect, useState } from 'react';
 
 export default function App() {
     const [tab, setTab] = useState<TabKey>('week');
@@ -15,8 +15,6 @@ export default function App() {
     const ui = useAppState((s) => s.ui);
     const locked = useAppState((s) => s.locked);
     const setLocked = useAppState((s) => s.setLocked);
-    // const user = useAppState((s) => s.user);
-    // Deprecated /register route removed; account is managed in Settings
 
     useEffect(() => {
         if (ui.passkeyEnabled && ui.passkeyCredentialId && locked !== false) {
