@@ -1,6 +1,6 @@
 import {
-	generateAuthenticationOptions,
-	verifyAuthenticationResponse,
+    generateAuthenticationOptions,
+    verifyAuthenticationResponse,
 } from "@simplewebauthn/server";
 import { createJWT, createSessionCookie } from "../_utils/jwt";
 
@@ -60,7 +60,7 @@ export const onRequestPost: PagesFunction<{
 	const credRow = (await env.PLM_DB.prepare(
 		"SELECT publicKey, counter FROM credentials WHERE credentialId = ?"
 	)
-		.bind(toBase64Url(new TextEncoder().encode(body.response.id)))
+		.bind(body.response.id)
 		.first()) as any;
 	if (!credRow) return new Response("credential not found", { status: 400 });
 
@@ -96,10 +96,7 @@ export const onRequestPost: PagesFunction<{
 	await env.PLM_DB.prepare(
 		"UPDATE credentials SET counter = ? WHERE credentialId = ?"
 	)
-		.bind(
-			verification.authenticationInfo.newCounter,
-			Buffer.from(body.response.id).toString("base64url")
-		)
+		.bind(verification.authenticationInfo.newCounter, body.response.id)
 		.run();
 	await env.SESSIONS.delete(`auth-${body.userId}`);
 	const jwt = await createJWT(
@@ -112,18 +109,7 @@ export const onRequestPost: PagesFunction<{
 	});
 };
 
-function toBase64Url(data: ArrayBuffer | Uint8Array | string): string {
-	let bytes: Uint8Array;
-	if (typeof data === "string") {
-		bytes = new TextEncoder().encode(data);
-	} else {
-		bytes = data instanceof Uint8Array ? data : new Uint8Array(data);
-	}
-	let bin = "";
-	for (let i = 0; i < bytes.length; i += 1)
-		bin += String.fromCharCode(bytes[i]);
-	return btoa(bin).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/g, "");
-}
+// removed unused toBase64Url helper after aligning credentialId encoding
 
 function fromBase64Url(b64url: string): Uint8Array {
 	const pad =
