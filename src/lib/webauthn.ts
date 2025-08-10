@@ -35,6 +35,9 @@ export async function startServerRegistration(
 	const json: any = await res.json();
 	const opts = json.options as any;
 	opts.challenge = base64urlToBuffer(opts.challenge);
+	if (opts.user && typeof opts.user.id === "string") {
+		opts.user.id = base64urlToBuffer(opts.user.id);
+	}
 	if (Array.isArray(opts.excludeCredentials))
 		opts.excludeCredentials = opts.excludeCredentials.map((d: any) => ({
 			...d,
