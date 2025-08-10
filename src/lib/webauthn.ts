@@ -31,7 +31,10 @@ export async function startServerRegistration(
 	const res = await fetch(
 		`/api/webauthn/register?email=${encodeURIComponent(email)}`
 	);
-	if (!res.ok) throw new Error("Failed to start registration");
+	if (!res.ok) {
+		const txt = await res.text().catch(() => "");
+		throw new Error(`Failed to start registration (${res.status}): ${txt}`);
+	}
 	const json: any = await res.json();
 	const opts = json.options as any;
 	opts.challenge = base64urlToBuffer(opts.challenge);
@@ -72,7 +75,10 @@ export async function finishServerRegistration(
 		headers: { "Content-Type": "application/json" },
 		body: JSON.stringify({ userId, email, response: att }),
 	});
-	if (!res.ok) throw new Error("Registration verify failed");
+	if (!res.ok) {
+		const txt = await res.text().catch(() => "");
+		throw new Error(`Registration verify failed (${res.status}): ${txt}`);
+	}
 }
 
 export async function startServerLogin(
@@ -81,7 +87,10 @@ export async function startServerLogin(
 	const res = await fetch(
 		`/api/webauthn/login?email=${encodeURIComponent(email)}`
 	);
-	if (!res.ok) throw new Error("Failed to start login");
+	if (!res.ok) {
+		const txt = await res.text().catch(() => "");
+		throw new Error(`Failed to start login (${res.status}): ${txt}`);
+	}
 	const json: any = await res.json();
 	const opts = json.options as any;
 	opts.challenge = base64urlToBuffer(opts.challenge);
@@ -127,5 +136,8 @@ export async function finishServerLogin(
 		headers: { "Content-Type": "application/json" },
 		body: JSON.stringify({ userId, email, response: resJson }),
 	});
-	if (!res.ok) throw new Error("Login verify failed");
+	if (!res.ok) {
+		const txt = await res.text().catch(() => "");
+		throw new Error(`Login verify failed (${res.status}): ${txt}`);
+	}
 }
