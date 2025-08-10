@@ -2,7 +2,6 @@ import {
 	generateAuthenticationOptions,
 	verifyAuthenticationResponse,
 } from "@simplewebauthn/server";
-import type { AuthenticationResponseJSON } from "@simplewebauthn/typescript-types";
 import { createJWT, createSessionCookie } from "../_utils/jwt";
 
 export const onRequestGet: PagesFunction<{
@@ -14,20 +13,21 @@ export const onRequestGet: PagesFunction<{
 	const url = new URL(request.url);
 	const email = url.searchParams.get("email") ?? "";
 	if (!email) return new Response("email required", { status: 400 });
-	const userRow = await env.PLM_DB.prepare(
+	const userRow = (await env.PLM_DB.prepare(
 		"SELECT id FROM users WHERE email = ?"
 	)
 		.bind(email)
-		.first<{ id: string }>();
+		.first()) as any;
 	if (!userRow) return new Response("not found", { status: 404 });
-	const creds = await env.PLM_DB.prepare(
+	const creds = (await env.PLM_DB.prepare(
 		"SELECT credentialId FROM credentials WHERE userId = ?"
 	)
 		.bind(userRow.id)
-		.all<{ credentialId: string }>();
+		.all()) as any;
 	const options = await generateAuthenticationOptions({
 		rpID: env.RP_ID,
-		allowCredentials: creds.results?.map((c) => ({ id: c.credentialId })) ?? [],
+		allowCredentials:
+			creds.results?.map((c: any) => ({ id: c.credentialId })) ?? [],
 		userVerification: "preferred",
 	});
 	await env.SESSIONS.put(
@@ -46,11 +46,7 @@ export const onRequestPost: PagesFunction<{
 	JWT_SECRET: string;
 }> = async (context) => {
 	const { env, request } = context;
-	const body = (await request.json()) as {
-		userId: string;
-		email: string;
-		response: AuthenticationResponseJSON;
-	};
+	const body = (await request.json()) as any;
 	const sessionRaw = await env.SESSIONS.get(`auth-${body.userId}`);
 	if (!sessionRaw) return new Response("no session", { status: 400 });
 	const session = JSON.parse(sessionRaw) as {
@@ -60,11 +56,11 @@ export const onRequestPost: PagesFunction<{
 	if (session.email !== body.email)
 		return new Response("email mismatch", { status: 400 });
 
-	const credRow = await env.PLM_DB.prepare(
+	const credRow = (await env.PLM_DB.prepare(
 		"SELECT publicKey, counter FROM credentials WHERE credentialId = ?"
 	)
 		.bind(Buffer.from(body.response.id).toString("base64url"))
-		.first<{ publicKey: string; counter: number }>();
+		.first()) as any;
 	if (!credRow) return new Response("credential not found", { status: 400 });
 
 	const verification = await verifyAuthenticationResponse({

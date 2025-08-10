@@ -11,15 +11,15 @@
 		"strict": true,
 		"forceConsistentCasingInFileNames": true,
 		"baseUrl": ".",
+		"jsx": "react-jsx",
+		"noEmit": true,
 		"paths": {
 			"@store/*": ["src/store/*"],
 			"@lib/*": ["src/lib/*"],
 			"@components/*": ["src/components/*"],
 			"@pages/*": ["src/components/pages/*"]
-		}
+		},
+		"types": ["vite/client"]
 	},
-	"references": [
-		{ "path": "./tsconfig.pages.json" },
-		{ "path": "./tsconfig.workers.json" }
-	]
+	"include": ["src"]
 }

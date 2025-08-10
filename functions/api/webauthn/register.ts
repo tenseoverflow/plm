@@ -2,7 +2,6 @@ import {
 	generateRegistrationOptions,
 	verifyRegistrationResponse,
 } from "@simplewebauthn/server";
-import type { RegistrationResponseJSON } from "@simplewebauthn/typescript-types";
 
 export const onRequestGet: PagesFunction<{
 	PLM_DB: D1Database;
@@ -23,16 +22,16 @@ export const onRequestGet: PagesFunction<{
 		if (!kv) throw new Error("KV binding missing (SESSIONS)");
 		if (!env.RP_ID || !env.ORIGIN) throw new Error("RP_ID/ORIGIN env missing");
 
-		const userRow = await db
+		const userRow = (await db
 			.prepare("SELECT id FROM users WHERE email = ?")
 			.bind(email)
-			.first<{ id: string }>();
+			.first()) as any;
 		const userId = userRow?.id ?? crypto.randomUUID();
 
-		const existingCreds = await db
+		const existingCreds = (await db
 			.prepare("SELECT credentialId FROM credentials WHERE userId = ?")
 			.bind(userId)
-			.all<{ credentialId: string }>();
+			.all()) as any;
 
 		const options = await generateRegistrationOptions({
 			rpName: env.RP_NAME,
@@ -45,7 +44,7 @@ export const onRequestGet: PagesFunction<{
 				residentKey: "preferred",
 			},
 			excludeCredentials:
-				existingCreds.results?.map((c) => ({ id: c.credentialId })) ?? [],
+				existingCreds.results?.map((c: any) => ({ id: c.credentialId })) ?? [],
 		});
 
 		await kv.put(
@@ -73,11 +72,7 @@ export const onRequestPost: PagesFunction<{
 }> = async (context) => {
 	try {
 		const { env, request } = context;
-		const body = (await request.json()) as {
-			userId: string;
-			email: string;
-			response: RegistrationResponseJSON;
-		};
+		const body = (await request.json()) as any;
 		const db: D1Database = (env as any).PLM_DB ?? (env as any).DB;
 		const kv: KVNamespace = env.SESSIONS;
 		if (!db) throw new Error("D1 binding missing (PLM_DB/DB)");

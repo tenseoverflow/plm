@@ -2,7 +2,7 @@ import React from 'react';
 import ReactDOM from 'react-dom/client';
 import './index.css';
 import { loadRemote, scheduleSave } from './lib/sync';
-import { useAppState } from './state';
+import { useAppState, type AppState } from './state';
 import App from './App';
 
 function applySystemTheme() {
@@ -42,8 +42,8 @@ void (async () => {
 })();
 
 // Auto-sync on any state change (debounced)
-useAppState.subscribe((state) => {
+useAppState.subscribe((state: AppState) => {
     try {
-        scheduleSave(state as any);
+        scheduleSave(state);
     } catch { }
 });

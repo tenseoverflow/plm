@@ -1,8 +1,0 @@
-{
-	"extends": "./tsconfig.json",
-	"compilerOptions": {
-		"composite": true,
-		"types": ["./worker-configuration.d.ts", "vite/client", "node"]
-	},
-	"include": ["./functions"]
-}
