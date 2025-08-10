@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { clearSessionCookie } from "./_utils/jwt";
 
 export const onRequestPost: PagesFunction<{ ORIGIN: string }> = async ({

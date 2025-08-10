@@ -2,7 +2,7 @@ import React from 'react';
 import ReactDOM from 'react-dom/client';
 import './index.css';
 import { loadRemote, scheduleSave } from './lib/sync';
-import { useAppState, type AppState } from './state';
+import { useAppState, type AppState } from './store';
 import App from './App';
 
 function applySystemTheme() {

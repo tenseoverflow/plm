@@ -1,5 +1,5 @@
-import React, { useEffect, useRef, useState } from 'react';
-import { useAppState } from '../state';
+import { useEffect, useRef, useState } from 'react';
+import { useAppState } from '@store/index';
 
 function format(seconds: number): string {
     const m = Math.floor(seconds / 60).toString().padStart(2, '0');

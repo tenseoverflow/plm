@@ -1,7 +1,6 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { useAppState, todayString } from '../../state';
-import { Task } from '../../state';
-import { isHabitScheduledOnDate } from '../../state';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { Fragment } from 'react/jsx-runtime';
+import { useAppState, todayString, Task, isHabitScheduledOnDate } from '@store/index';
 import Card from '../ui/Card';
 import Input from '../ui/Input';
 import Checkbox from '../ui/Checkbox';
@@ -213,7 +212,7 @@ export default function Week() {
             <div ref={scrollerRef} className="overflow-x-auto snap-x snap-mandatory w-full">
                 <div className="flex items-stretch gap-4 min-w-full">
                     {weeks.map((week, idx) => (
-                        <React.Fragment key={week.key}>
+                        <Fragment key={week.key}>
                             {idx > 0 && (
                                 <div aria-hidden className="w-px self-stretch bg-neutral-300 dark:bg-neutral-800" />
                             )}
@@ -289,7 +288,7 @@ export default function Week() {
                                     </Card>
                                 );
                             })}
-                        </React.Fragment>
+                        </Fragment>
                     ))}
                 </div>
             </div>

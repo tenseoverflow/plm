@@ -1,4 +1,4 @@
-import { AppState } from "../state";
+import { AppState } from "@store/index";
 
 export async function loadRemote(): Promise<Partial<AppState> | null> {
 	try {

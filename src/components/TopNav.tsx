@@ -1,4 +1,3 @@
-import React from 'react';
 import clsx from 'classnames';
 
 export type TabKey = 'week' | 'quarterly' | 'history' | 'settings';

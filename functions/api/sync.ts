@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { verifyJWT } from "./_utils/jwt";
 
 export const onRequestGet: PagesFunction<{

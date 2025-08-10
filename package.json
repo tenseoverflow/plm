@@ -1,8 +1,16 @@
 {
   "name": "plm",
-  "private": true,
   "version": "0.1.0",
-  "type": "module",
+  "homepage": "https://plm.hen.ee",
+  "license": "GPL-3.0-only",
+  "author": "tenseoverflow <contact@hen.ee>",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/tenseoverflow/plm.git"
+  },
+  "bugs": {
+    "url": "https://github.com/tenseoverflow/plm/issues"
+  },
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",

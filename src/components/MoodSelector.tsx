@@ -1,5 +1,4 @@
-import React from 'react';
-import { MoodValue } from '../state';
+import { MoodValue } from '@store/index';
 
 const moods: { value: MoodValue; label: string; emoji: string }[] = [
     { value: 1, label: 'Low', emoji: '😞' },

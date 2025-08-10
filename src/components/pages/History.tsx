@@ -1,8 +1,8 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { isHabitScheduledOnDate, MoodValue, todayString, useAppState } from '../../state';
-import { moodEmoji } from '../../lib/format';
-import Card from '../ui/Card';
-import Container from '../ui/Container';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { isHabitScheduledOnDate, MoodValue, todayString, useAppState } from '@store/index';
+import { moodEmoji } from '@lib/format';
+import Card from '@components/ui/Card';
+import Container from '@components/ui/Container';
 
 export default function History() {
     const moodByDate = useAppState((s) => s.moodByDate);

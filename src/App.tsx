@@ -1,13 +1,13 @@
-import React, { useState } from 'react';
-import TopNav, { TabKey } from './components/TopNav';
-import History from './components/pages/History';
-import Week from './components/pages/Week';
-import { todayString, useAppState } from './state';
-import MoodSelector from './components/MoodSelector';
-import Input from './components/ui/Input';
-import Quarterly from './components/pages/Quarterly';
-import Button from './components/ui/Button';
-import { finishServerLogin, startServerLogin } from './lib/webauthn';
+import { useState, useEffect, FC } from 'react';
+import TopNav, { TabKey } from '@components/TopNav';
+import History from '@pages/History';
+import Week from '@pages/Week';
+import { todayString, useAppState } from '@store/index';
+import MoodSelector from '@components/MoodSelector';
+import Input from '@components/ui/Input';
+import Quarterly from '@pages/Quarterly';
+import Button from '@components/ui/Button';
+import { finishServerLogin, startServerLogin } from '@lib/webauthn';
 
 export default function App() {
     const [tab, setTab] = useState<TabKey>('week');
@@ -18,7 +18,7 @@ export default function App() {
     // const user = useAppState((s) => s.user);
     // Deprecated /register route removed; account is managed in Settings
 
-    React.useEffect(() => {
+    useEffect(() => {
         if (ui.passkeyEnabled && ui.passkeyCredentialId && locked !== false) {
             setLocked(true);
         }
@@ -74,8 +74,8 @@ export default function App() {
 }
 
 function LoginWithPasskey({ onUnlocked }: { onUnlocked: () => void }) {
-    const [email, setEmail] = React.useState('');
-    const [loading, setLoading] = React.useState(false);
+    const [email, setEmail] = useState('');
+    const [loading, setLoading] = useState(false);
     return (
         <div className="space-y-3">
             <input
@@ -172,8 +172,8 @@ function HeaderHome({ className }: { className?: string }) {
 }
 
 function SettingsLazy() {
-    const [Comp, setComp] = useState<React.FC | null>(null);
-    React.useEffect(() => {
+    const [Comp, setComp] = useState<FC | null>(null);
+    useEffect(() => {
         import('./components/pages/Settings').then((m) => setComp(() => m.default));
     }, []);
     if (!Comp) return <div className="text-sm text-neutral-500">Loading…</div>;

@@ -1,8 +1,8 @@
-import React, { useRef, useState } from 'react';
-import { HabitSchedule, useAppState } from '../../state';
-import Input from '../ui/Input';
-import Button from '../ui/Button';
-import { startServerLogin, finishServerLogin, startServerRegistration, finishServerRegistration } from '../../lib/webauthn';
+import { useRef, useState } from 'react';
+import { HabitSchedule, useAppState } from '@store/index';
+import Input from '@components/ui/Input';
+import Button from '@components/ui/Button';
+import { startServerLogin, finishServerLogin, startServerRegistration, finishServerRegistration } from '@lib/webauthn';
 
 export default function Settings() {
     const state = useAppState();

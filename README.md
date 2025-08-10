@@ -1,32 +1,21 @@
 # Mindful PLM
 
-A minimal, calm personal life manager focused on mindfulness. Local-first (no accounts), offline-capable, and simple.
-
-## Features
-
-- Today: mood check-in, daily intention, top 3 tasks
-- Journal: light prompt + free writing
-- Breathe: box breathing guide (4-4-4-4)
-- Focus: 25-min timer with session logging
-- Habits: simple daily checkmarks
-- Settings: dark mode, export/import JSON, reset
+A minimal, calm personal life manager focused on mindfulness. Hosted on Cloudflare, meant as a project to test out the capabilities of GPT-5 and to be useful in my day-to-day life.
 
 ## Tech
 
 - React + TypeScript + Vite
 - TailwindCSS for styling
 - Zustand persisted to localStorage
+- Cloudflare D1 for database
+- Cloudflare Pages for hosting
+- Cloudflare KV for session storage
 
 ## Run
 
 ```bash
-npm install
-npm run dev
+pnpm install
+pnpm run dev
 ```
 
 Then open the URL printed by the dev server (default `http://localhost:5173`).
-
-## Notes
-
-- All data is stored locally in `localStorage` under the key `mindful-plm`.
-- You can export/import your data from Settings.

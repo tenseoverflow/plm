@@ -1,6 +1,6 @@
-import React, { useMemo, useState } from 'react';
-import { quarterKey, startOfWeekString, useAppState } from '../../state';
-import Card from '../ui/Card';
+import { useMemo, useState } from 'react';
+import { quarterKey, startOfWeekString, useAppState } from '@store/index';
+import Card from '@components/ui/Card';
 
 function computeQuarterKey(date: Date) {
     return quarterKey(date);

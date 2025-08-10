@@ -1,4 +1,4 @@
-import type { MoodValue } from "../state";
+import type { MoodValue } from "@store/index";
 
 export function moodEmoji(m?: MoodValue) {
 	return m === 5
