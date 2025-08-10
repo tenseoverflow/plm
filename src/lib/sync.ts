@@ -4,7 +4,7 @@ export async function loadRemote(): Promise<Partial<AppState> | null> {
 	try {
 		const res = await fetch("/api/sync", { credentials: "include" });
 		if (!res.ok) return null;
-		const json = await res.json();
+		const json: any = await res.json();
 		return json.data as Partial<AppState>;
 	} catch {
 		return null;

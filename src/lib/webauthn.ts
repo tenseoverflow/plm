@@ -32,7 +32,7 @@ export async function startServerRegistration(
 		`/api/webauthn/register?email=${encodeURIComponent(email)}`
 	);
 	if (!res.ok) throw new Error("Failed to start registration");
-	const json = await res.json();
+	const json: any = await res.json();
 	const opts = json.options as any;
 	opts.challenge = base64urlToBuffer(opts.challenge);
 	if (Array.isArray(opts.excludeCredentials))
@@ -79,7 +79,7 @@ export async function startServerLogin(
 		`/api/webauthn/login?email=${encodeURIComponent(email)}`
 	);
 	if (!res.ok) throw new Error("Failed to start login");
-	const json = await res.json();
+	const json: any = await res.json();
 	const opts = json.options as any;
 	opts.challenge = base64urlToBuffer(opts.challenge);
 	if (Array.isArray(opts.allowCredentials))

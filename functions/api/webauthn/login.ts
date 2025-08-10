@@ -1,4 +1,3 @@
-// @ts-nocheck
 import {
 	generateAuthenticationOptions,
 	verifyAuthenticationResponse,
@@ -28,11 +27,7 @@ export const onRequestGet: PagesFunction<{
 		.all<{ credentialId: string }>();
 	const options = await generateAuthenticationOptions({
 		rpID: env.RP_ID,
-		allowCredentials:
-			creds.results?.map((c) => ({
-				id: Buffer.from(c.credentialId, "base64url"),
-				type: "public-key",
-			})) ?? [],
+		allowCredentials: creds.results?.map((c) => ({ id: c.credentialId })) ?? [],
 		userVerification: "preferred",
 	});
 	await env.SESSIONS.put(
@@ -48,6 +43,7 @@ export const onRequestPost: PagesFunction<{
 	SESSIONS: KVNamespace;
 	RP_ID: string;
 	ORIGIN: string;
+	JWT_SECRET: string;
 }> = async (context) => {
 	const { env, request } = context;
 	const body = (await request.json()) as {
@@ -82,7 +78,7 @@ export const onRequestPost: PagesFunction<{
 			counter: credRow.counter,
 			transports: ["internal"],
 		},
-	});
+	} as any);
 
 	if (!verification.verified || !verification.authenticationInfo) {
 		return new Response("verification failed", { status: 400 });

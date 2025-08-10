@@ -1,0 +1,63 @@
+import { generateAuthenticationOptions, verifyAuthenticationResponse, } from "@simplewebauthn/server";
+import { createJWT, createSessionCookie } from "../_utils/jwt";
+export const onRequestGet = async (context) => {
+    const { env, request } = context;
+    const url = new URL(request.url);
+    const email = url.searchParams.get("email") ?? "";
+    if (!email)
+        return new Response("email required", { status: 400 });
+    const userRow = await env.PLM_DB.prepare("SELECT id FROM users WHERE email = ?")
+        .bind(email)
+        .first();
+    if (!userRow)
+        return new Response("not found", { status: 404 });
+    const creds = await env.PLM_DB.prepare("SELECT credentialId FROM credentials WHERE userId = ?")
+        .bind(userRow.id)
+        .all();
+    const options = await generateAuthenticationOptions({
+        rpID: env.RP_ID,
+        allowCredentials: creds.results?.map((c) => ({ id: c.credentialId })) ?? [],
+        userVerification: "preferred",
+    });
+    await env.SESSIONS.put(`auth-${userRow.id}`, JSON.stringify({ challenge: options.challenge, email }), { expirationTtl: 600 });
+    return Response.json({ userId: userRow.id, options });
+};
+export const onRequestPost = async (context) => {
+    const { env, request } = context;
+    const body = (await request.json());
+    const sessionRaw = await env.SESSIONS.get(`auth-${body.userId}`);
+    if (!sessionRaw)
+        return new Response("no session", { status: 400 });
+    const session = JSON.parse(sessionRaw);
+    if (session.email !== body.email)
+        return new Response("email mismatch", { status: 400 });
+    const credRow = await env.PLM_DB.prepare("SELECT publicKey, counter FROM credentials WHERE credentialId = ?")
+        .bind(Buffer.from(body.response.id).toString("base64url"))
+        .first();
+    if (!credRow)
+        return new Response("credential not found", { status: 400 });
+    const verification = await verifyAuthenticationResponse({
+        expectedChallenge: session.challenge,
+        expectedOrigin: env.ORIGIN,
+        expectedRPID: env.RP_ID,
+        response: body.response,
+        authenticator: {
+            credentialPublicKey: Buffer.from(credRow.publicKey, "base64url"),
+            credentialID: Buffer.from(body.response.id, "base64url"),
+            counter: credRow.counter,
+            transports: ["internal"],
+        },
+    });
+    if (!verification.verified || !verification.authenticationInfo) {
+        return new Response("verification failed", { status: 400 });
+    }
+    await env.PLM_DB.prepare("UPDATE credentials SET counter = ? WHERE credentialId = ?")
+        .bind(verification.authenticationInfo.newCounter, Buffer.from(body.response.id).toString("base64url"))
+        .run();
+    await env.SESSIONS.delete(`auth-${body.userId}`);
+    const jwt = await createJWT({ sub: body.userId, email: body.email }, env.JWT_SECRET);
+    const cookie = createSessionCookie(jwt, env.ORIGIN);
+    return new Response(JSON.stringify({ ok: true }), {
+        headers: { "Content-Type": "application/json", "Set-Cookie": cookie },
+    });
+};

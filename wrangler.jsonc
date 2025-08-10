@@ -2,6 +2,7 @@
 	"$schema": "https://raw.githubusercontent.com/cloudflare/workers-sdk/main/wrangler.schema.json",
 	"name": "plm",
 	"compatibility_flags": ["nodejs_compat"],
+	"compatibility_date": "2024-08-01",
 	"pages_build_output_dir": "dist",
 	"d1_databases": [
 		{
