@@ -87,12 +87,24 @@ export const onRequestPost: PagesFunction<{
 		if (session.email !== body.email)
 			return new Response("email mismatch", { status: 400 });
 
+		const requestOrigin = (
+			context.request.headers.get("Origin") || ""
+		).toString();
+		const origins = Array.from(
+			new Set([env.ORIGIN, requestOrigin].filter(Boolean))
+		);
+		const rpid = new URL(context.request.url).hostname;
 		const verification = await verifyRegistrationResponse({
 			expectedChallenge: session.challenge,
-			expectedOrigin: env.ORIGIN,
-			expectedRPID: env.RP_ID,
+			expectedOrigin:
+				origins.length > 0
+					? origins.length === 1
+						? origins[0]
+						: origins
+					: env.ORIGIN,
+			expectedRPID: rpid,
 			response: body.response,
-		});
+		} as any);
 		if (!verification.verified || !verification.registrationInfo) {
 			return new Response("verification failed", { status: 400 });
 		}

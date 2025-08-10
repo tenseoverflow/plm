@@ -63,10 +63,22 @@ export const onRequestPost: PagesFunction<{
 		.first()) as any;
 	if (!credRow) return new Response("credential not found", { status: 400 });
 
+	const requestOrigin = (
+		context.request.headers.get("Origin") || ""
+	).toString();
+	const origins = Array.from(
+		new Set([env.ORIGIN, requestOrigin].filter(Boolean))
+	);
+	const rpid = new URL(context.request.url).hostname;
 	const verification = await verifyAuthenticationResponse({
 		expectedChallenge: session.challenge,
-		expectedOrigin: env.ORIGIN,
-		expectedRPID: env.RP_ID,
+		expectedOrigin:
+			origins.length > 0
+				? origins.length === 1
+					? origins[0]
+					: origins
+				: env.ORIGIN,
+		expectedRPID: rpid,
 		response: body.response,
 		authenticator: {
 			credentialPublicKey: Buffer.from(credRow.publicKey, "base64url"),
