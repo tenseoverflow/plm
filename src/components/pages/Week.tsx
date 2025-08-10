@@ -1,7 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { useAppState, todayString } from '../../state';
 import { Task } from '../../state';
-import MoodSelector from '../MoodSelector';
 import { isHabitScheduledOnDate } from '../../state';
 import Card from '../ui/Card';
 import Input from '../ui/Input';
@@ -30,10 +29,6 @@ function fmtDay(date: Date): string {
 
 function fmtDate(date: Date): string {
     return date.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
-}
-
-function fmtRange(start: Date, end: Date): string {
-    return `${fmtDate(start)} – ${fmtDate(end)}`;
 }
 
 type DayInfo = { date: Date; dateStr: string };
@@ -84,12 +79,6 @@ export default function Week() {
 
     const addFocusSession = useAppState((s) => s.addFocusSession);
 
-    const moodByDate = useAppState((s) => s.moodByDate);
-    const setMood = useAppState((s) => s.setMood);
-    const intentionByDate = useAppState((s) => s.intentionByDate);
-    const setIntention = useAppState((s) => s.setIntention);
-
-    const showMindfulness = useAppState((s) => s.ui.showMindfulnessInWeek);
     const ui = useAppState((s) => s.ui);
 
     const habits = useAppState((s) => s.habits ?? []);
@@ -140,8 +129,6 @@ export default function Week() {
     }
 
     const todayStrVal = todayString();
-
-    const moodEmoji = (m?: number) => (m === 5 ? '🌞' : m === 4 ? '😊' : m === 3 ? '🙂' : m === 2 ? '☁️' : m === 1 ? '😞' : '—');
 
     const [focusForTask, setFocusForTask] = useState<FocusTask | null>(null);
     const [focusRun, setFocusRun] = useState<FocusRun | null>(null);
@@ -233,8 +220,6 @@ export default function Week() {
                             {week.days.map(({ date, dateStr }) => {
                                 const tasks = tasksByDate[dateStr] ?? [];
                                 const isToday = todayStrVal === dateStr;
-                                const mood = moodByDate[dateStr];
-                                const intention = intentionByDate[dateStr] ?? '';
                                 const dayHabits = habits.filter((h) => isHabitScheduledOnDate(h.schedule, date));
 
                                 return (
@@ -553,12 +538,6 @@ function FocusMiniWidget({ run, index, remaining, running, onPause, onResume, on
             </div>
         </div>
     );
-}
-
-function IntentionInline({ value, onSave, placeholder }: { value: string; onSave: (val: string) => void; placeholder: string }) {
-    const [text, setText] = useState(value);
-    useEffect(() => setText(value), [value]);
-    return <Input value={text} onChange={(e) => setText(e.target.value)} onBlur={() => onSave(text)} placeholder={placeholder} />;
 }
 
 function AddInline({ onAdd, placeholder }: { onAdd: (title: string) => void; placeholder: string }) {

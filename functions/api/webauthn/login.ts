@@ -60,7 +60,7 @@ export const onRequestPost: PagesFunction<{
 	const credRow = (await env.PLM_DB.prepare(
 		"SELECT publicKey, counter FROM credentials WHERE credentialId = ?"
 	)
-		.bind(Buffer.from(body.response.id).toString("base64url"))
+		.bind(toBase64Url(new TextEncoder().encode(body.response.id)))
 		.first()) as any;
 	if (!credRow) return new Response("credential not found", { status: 400 });
 
@@ -82,8 +82,8 @@ export const onRequestPost: PagesFunction<{
 		expectedRPID: rpid,
 		response: body.response,
 		authenticator: {
-			credentialPublicKey: Buffer.from(credRow.publicKey, "base64url"),
-			credentialID: Buffer.from(body.response.id, "base64url"),
+			credentialPublicKey: fromBase64Url(credRow.publicKey),
+			credentialID: fromBase64Url(body.response.id),
 			counter: credRow.counter,
 			transports: ["internal"],
 		},
@@ -111,3 +111,26 @@ export const onRequestPost: PagesFunction<{
 		headers: { "Content-Type": "application/json", "Set-Cookie": cookie },
 	});
 };
+
+function toBase64Url(data: ArrayBuffer | Uint8Array | string): string {
+	let bytes: Uint8Array;
+	if (typeof data === "string") {
+		bytes = new TextEncoder().encode(data);
+	} else {
+		bytes = data instanceof Uint8Array ? data : new Uint8Array(data);
+	}
+	let bin = "";
+	for (let i = 0; i < bytes.length; i += 1)
+		bin += String.fromCharCode(bytes[i]);
+	return btoa(bin).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/g, "");
+}
+
+function fromBase64Url(b64url: string): Uint8Array {
+	const pad =
+		b64url.length % 4 === 0 ? "" : "=".repeat(4 - (b64url.length % 4));
+	const b64 = b64url.replace(/-/g, "+").replace(/_/g, "/") + pad;
+	const bin = atob(b64);
+	const bytes = new Uint8Array(bin.length);
+	for (let i = 0; i < bin.length; i += 1) bytes[i] = bin.charCodeAt(i);
+	return bytes;
+}

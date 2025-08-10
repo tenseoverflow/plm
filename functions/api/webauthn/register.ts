@@ -112,6 +112,8 @@ export const onRequestPost: PagesFunction<{
 
 		const { credentialPublicKey, credentialID, counter } =
 			verification.registrationInfo as any;
+		const credIdB64 = toBase64Url(credentialID);
+		const pubKeyB64 = toBase64Url(credentialPublicKey);
 		await db.batch([
 			db
 				.prepare("INSERT OR IGNORE INTO users (id, email) VALUES (?, ?)")
@@ -120,12 +122,7 @@ export const onRequestPost: PagesFunction<{
 				.prepare(
 					"INSERT INTO credentials (userId, credentialId, publicKey, counter) VALUES (?, ?, ?, ?)"
 				)
-				.bind(
-					body.userId,
-					Buffer.from(credentialID).toString("base64url"),
-					Buffer.from(credentialPublicKey).toString("base64url"),
-					counter
-				),
+				.bind(body.userId, credIdB64, pubKeyB64, counter),
 		]);
 
 		await kv.delete(`reg-${body.userId}`);
@@ -140,3 +137,11 @@ export const onRequestPost: PagesFunction<{
 		);
 	}
 };
+
+function toBase64Url(data: ArrayBuffer | Uint8Array): string {
+	const bytes = data instanceof Uint8Array ? data : new Uint8Array(data);
+	let bin = "";
+	for (let i = 0; i < bytes.length; i += 1)
+		bin += String.fromCharCode(bytes[i]);
+	return btoa(bin).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/g, "");
+}
