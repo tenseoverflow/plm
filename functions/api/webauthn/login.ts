@@ -24,8 +24,9 @@ export const onRequestGet: PagesFunction<{
 	)
 		.bind(userRow.id)
 		.all()) as any;
+	const genRpid = new URL(request.url).hostname;
 	const options = await generateAuthenticationOptions({
-		rpID: env.RP_ID,
+		rpID: genRpid,
 		allowCredentials:
 			creds.results?.map((c: any) => ({ id: c.credentialId })) ?? [],
 		userVerification: "preferred",

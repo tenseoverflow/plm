@@ -33,9 +33,10 @@ export const onRequestGet: PagesFunction<{
 			.bind(userId)
 			.all()) as any;
 
+		const genRpid = new URL(request.url).hostname;
 		const options = await generateRegistrationOptions({
 			rpName: env.RP_NAME,
-			rpID: env.RP_ID,
+			rpID: genRpid,
 			userID: new TextEncoder().encode(userId),
 			userName: email,
 			attestationType: "none",
