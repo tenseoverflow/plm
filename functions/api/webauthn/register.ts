@@ -114,6 +114,11 @@ export const onRequestPost: PagesFunction<{
 			verification.registrationInfo as any;
 		const credIdB64 = toBase64Url(credentialID);
 		const pubKeyB64 = toBase64Url(credentialPublicKey);
+		const safeCounter =
+			typeof counter === "number" && Number.isFinite(counter) ? counter : 0;
+		if (!credIdB64 || !pubKeyB64) {
+			return new Response("invalid credential data", { status: 400 });
+		}
 		await db.batch([
 			db
 				.prepare("INSERT OR IGNORE INTO users (id, email) VALUES (?, ?)")
@@ -122,7 +127,7 @@ export const onRequestPost: PagesFunction<{
 				.prepare(
 					"INSERT INTO credentials (userId, credentialId, publicKey, counter) VALUES (?, ?, ?, ?)"
 				)
-				.bind(body.userId, credIdB64, pubKeyB64, counter),
+				.bind(body.userId, credIdB64, pubKeyB64, safeCounter),
 		]);
 
 		await kv.delete(`reg-${body.userId}`);
