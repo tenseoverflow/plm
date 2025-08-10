@@ -40,73 +40,80 @@ export const onRequestGet: PagesFunction<{
 };
 
 export const onRequestPost: PagesFunction<{
-	PLM_DB: D1Database;
-	SESSIONS: KVNamespace;
-	RP_ID: string;
-	ORIGIN: string;
-	JWT_SECRET: string;
+    PLM_DB: D1Database;
+    SESSIONS: KVNamespace;
+    RP_ID: string;
+    ORIGIN: string;
+    JWT_SECRET: string;
 }> = async (context) => {
-	const { env, request } = context;
-	const body = (await request.json()) as any;
-	const sessionRaw = await env.SESSIONS.get(`auth-${body.userId}`);
-	if (!sessionRaw) return new Response("no session", { status: 400 });
-	const session = JSON.parse(sessionRaw) as {
-		challenge: string;
-		email: string;
-	};
-	if (session.email !== body.email)
-		return new Response("email mismatch", { status: 400 });
+    try {
+        const { env, request } = context;
+        const body = (await request.json()) as any;
+        const sessionRaw = await env.SESSIONS.get(`auth-${body.userId}`);
+        if (!sessionRaw) return new Response("no session", { status: 400 });
+        const session = JSON.parse(sessionRaw) as {
+            challenge: string;
+            email: string;
+        };
+        if (session.email !== body.email)
+            return new Response("email mismatch", { status: 400 });
 
-	const credRow = (await env.PLM_DB.prepare(
-		"SELECT publicKey, counter FROM credentials WHERE credentialId = ?"
-	)
-		.bind(body.response.id)
-		.first()) as any;
-	if (!credRow) return new Response("credential not found", { status: 400 });
+        const credRow = (await env.PLM_DB.prepare(
+            "SELECT publicKey, counter FROM credentials WHERE credentialId = ?"
+        )
+            .bind(body.response.id)
+            .first()) as any;
+        if (!credRow) return new Response("credential not found", { status: 400 });
 
-	const requestOrigin = (
-		context.request.headers.get("Origin") || ""
-	).toString();
-	const origins = Array.from(
-		new Set([env.ORIGIN, requestOrigin].filter(Boolean))
-	);
-	const rpid = new URL(context.request.url).hostname;
-	const verification = await verifyAuthenticationResponse({
-		expectedChallenge: session.challenge,
-		expectedOrigin:
-			origins.length > 0
-				? origins.length === 1
-					? origins[0]
-					: origins
-				: env.ORIGIN,
-		expectedRPID: rpid,
-		response: body.response,
-		authenticator: {
-			credentialPublicKey: fromBase64Url(credRow.publicKey),
-			credentialID: fromBase64Url(body.response.id),
-			counter: credRow.counter,
-			transports: ["internal"],
-		},
-	} as any);
+        const requestOrigin = (
+            context.request.headers.get("Origin") || ""
+        ).toString();
+        const origins = Array.from(
+            new Set([env.ORIGIN, requestOrigin].filter(Boolean))
+        );
+        const rpid = new URL(context.request.url).hostname;
+        const verification = await verifyAuthenticationResponse({
+            expectedChallenge: session.challenge,
+            expectedOrigin:
+                origins.length > 0
+                    ? origins.length === 1
+                        ? origins[0]
+                        : origins
+                    : env.ORIGIN,
+            expectedRPID: rpid,
+            response: body.response,
+            authenticator: {
+                credentialPublicKey: fromBase64Url(credRow.publicKey),
+                credentialID: fromBase64Url(body.response.id),
+                counter: credRow.counter,
+                transports: ["internal"],
+            },
+        } as any);
 
-	if (!verification.verified || !verification.authenticationInfo) {
-		return new Response("verification failed", { status: 400 });
-	}
+        if (!verification.verified || !verification.authenticationInfo) {
+            return new Response("verification failed", { status: 400 });
+        }
 
-	await env.PLM_DB.prepare(
-		"UPDATE credentials SET counter = ? WHERE credentialId = ?"
-	)
-		.bind(verification.authenticationInfo.newCounter, body.response.id)
-		.run();
-	await env.SESSIONS.delete(`auth-${body.userId}`);
-	const jwt = await createJWT(
-		{ sub: body.userId, email: body.email },
-		env.JWT_SECRET
-	);
-	const cookie = createSessionCookie(jwt, env.ORIGIN);
-	return new Response(JSON.stringify({ ok: true }), {
-		headers: { "Content-Type": "application/json", "Set-Cookie": cookie },
-	});
+        await env.PLM_DB.prepare(
+            "UPDATE credentials SET counter = ? WHERE credentialId = ?"
+        )
+            .bind(verification.authenticationInfo.newCounter, body.response.id)
+            .run();
+        await env.SESSIONS.delete(`auth-${body.userId}`);
+        const jwt = await createJWT(
+            { sub: body.userId, email: body.email },
+            env.JWT_SECRET
+        );
+        const cookie = createSessionCookie(jwt, env.ORIGIN);
+        return new Response(JSON.stringify({ ok: true }), {
+            headers: { "Content-Type": "application/json", "Set-Cookie": cookie },
+        });
+    } catch (err: any) {
+        return new Response(
+            JSON.stringify({ error: String(err?.message || err) }),
+            { status: 500, headers: { "Content-Type": "application/json" } }
+        );
+    }
 };
 
 // removed unused toBase64Url helper after aligning credentialId encoding
