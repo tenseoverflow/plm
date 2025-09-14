@@ -1,49 +1,116 @@
-import { verifyJWT } from "./_utils/jwt";
-
-export const onRequestGet: PagesFunction<{
-	PLM_DB: D1Database;
-	JWT_SECRET: string;
-}> = async ({ env, request }) => {
-	const cookie = request.headers.get("cookie") || "";
-	const jwt = parseCookie(cookie, "plm_s");
-	if (!jwt) return new Response("unauthorized", { status: 401 });
-	const payload = await verifyJWT(jwt, env.JWT_SECRET);
-	if (!payload?.sub) return new Response("unauthorized", { status: 401 });
-	const row = await env.PLM_DB.prepare(
-		"SELECT data, updatedAt FROM user_data WHERE userId = ?"
-	)
-		.bind(payload.sub)
-		.first<{ data: string; updatedAt: number }>();
-	return Response.json({
-		data: row?.data ? JSON.parse(row.data) : null,
-		updatedAt: row?.updatedAt ?? 0,
-	});
-};
-
-export const onRequestPost: PagesFunction<{
-	PLM_DB: D1Database;
-	JWT_SECRET: string;
-}> = async ({ env, request }) => {
-	const cookie = request.headers.get("cookie") || "";
-	const jwt = parseCookie(cookie, "plm_s");
-	if (!jwt) return new Response("unauthorized", { status: 401 });
-	const payload = await verifyJWT(jwt, env.JWT_SECRET);
-	if (!payload?.sub) return new Response("unauthorized", { status: 401 });
-	const body = await request.json();
-	const now = Date.now();
-	await env.PLM_DB.prepare(
-		"INSERT INTO user_data (userId, data, updatedAt) VALUES (?, ?, ?) ON CONFLICT(userId) DO UPDATE SET data = excluded.data, updatedAt = excluded.updatedAt"
-	)
-		.bind(payload.sub, JSON.stringify(body), now)
-		.run();
-	return Response.json({ ok: true, updatedAt: now });
-};
-
-function parseCookie(cookie: string, key: string): string | null {
-	const parts = cookie.split(";").map((s) => s.trim());
-	for (const p of parts) {
-		const [k, v] = p.split("=");
-		if (k === key) return v ?? null;
-	}
-	return null;
+export interface Env {
+  PLM_DB: D1Database;
+  SESSIONS: KVNamespace;
+  JWT_SECRET: string;
+  RP_NAME: string;
+  RP_ID: string;
+  ORIGIN: string;
 }
+
+// Store user data (sync from client)
+export const onRequestPost: PagesFunction<Env> = async (context) => {
+  try {
+    const { request, env } = context;
+
+    let body: any;
+    try {
+      body = await request.json();
+    } catch (e) {
+      return new Response(
+        JSON.stringify({ error: "Invalid JSON in request body" }),
+        {
+          status: 400,
+          headers: { "Content-Type": "application/json" },
+        },
+      );
+    }
+
+    const { data, userId } = body as { data: any; userId?: string };
+
+    if (!data) {
+      return new Response(JSON.stringify({ error: "Data is required" }), {
+        status: 400,
+        headers: { "Content-Type": "application/json" },
+      });
+    }
+
+    // Get userId from request body if provided, or try to get from session
+    const targetUserId = userId;
+
+    if (!targetUserId) {
+      return new Response(
+        JSON.stringify({ error: "User ID is required. Please log in first." }),
+        {
+          status: 401,
+          headers: { "Content-Type": "application/json" },
+        },
+      );
+    }
+
+    // Update or insert user data
+    await env.PLM_DB.prepare(
+      `INSERT INTO user_data (user_id, data, updated_at) 
+       VALUES (?, ?, ?) 
+       ON CONFLICT(user_id) DO UPDATE SET 
+       data = excluded.data, 
+       updated_at = excluded.updated_at`,
+    )
+      .bind(targetUserId, JSON.stringify(data), new Date().toISOString())
+      .run();
+
+    return new Response(JSON.stringify({ success: true }), {
+      headers: { "Content-Type": "application/json" },
+    });
+  } catch (error) {
+    console.error("Sync error:", error);
+    return new Response(JSON.stringify({ error: "Internal server error" }), {
+      status: 500,
+      headers: { "Content-Type": "application/json" },
+    });
+  }
+};
+
+// Load user data (sync to client)
+export const onRequestGet: PagesFunction<Env> = async (context) => {
+  try {
+    const { env, request } = context;
+    const url = new URL(request.url);
+    const userId = url.searchParams.get("userId");
+
+    if (!userId) {
+      return new Response(JSON.stringify({ error: "User ID is required" }), {
+        status: 400,
+        headers: { "Content-Type": "application/json" },
+      });
+    }
+
+    // Get user data
+    const userData = await env.PLM_DB.prepare(
+      "SELECT data FROM user_data WHERE user_id = ? ORDER BY updated_at DESC LIMIT 1",
+    )
+      .bind(userId)
+      .first();
+
+    if (!userData) {
+      return new Response(JSON.stringify({ success: false, data: null }), {
+        headers: { "Content-Type": "application/json" },
+      });
+    }
+
+    return new Response(
+      JSON.stringify({
+        success: true,
+        data: JSON.parse(userData.data as string),
+      }),
+      {
+        headers: { "Content-Type": "application/json" },
+      },
+    );
+  } catch (error) {
+    console.error("Load data error:", error);
+    return new Response(JSON.stringify({ error: "Internal server error" }), {
+      status: 500,
+      headers: { "Content-Type": "application/json" },
+    });
+  }
+};

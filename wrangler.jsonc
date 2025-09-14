@@ -1,26 +1,26 @@
 {
-	"$schema": "https://raw.githubusercontent.com/cloudflare/workers-sdk/main/wrangler.schema.json",
-	"name": "plm",
-	"compatibility_flags": ["nodejs_compat"],
-	"compatibility_date": "2025-08-10",
-	"pages_build_output_dir": "dist",
-	"d1_databases": [
-		{
-			"binding": "PLM_DB",
-			"database_name": "plm-db",
-			"database_id": "8ac89f01-df9d-43ec-80d3-34df70c3b699"
-		}
-	],
-	"kv_namespaces": [
-		{
-			"binding": "SESSIONS",
-			"id": "7658c8768e1647a3ba7f45bfe4bd4ede"
-		}
-	],
-	"vars": {
-		"RP_NAME": "PLM",
-		"RP_ID": "plm.hen.ee",
-		"ORIGIN": "https://plm.hen.ee",
-		"JWT_SECRET": "fBWMIqeAs4AeZwS0YfH0BuaUoQQGP3WUSNmpFytGvo7cgaJpYjCDYmh8JPKsxRiP"
-	}
+  "$schema": "https://raw.githubusercontent.com/cloudflare/workers-sdk/main/wrangler.schema.json",
+  "name": "plm",
+  "compatibility_flags": ["nodejs_compat"],
+  "compatibility_date": "2025-08-10",
+  "pages_build_output_dir": "dist",
+  "d1_databases": [
+    {
+      "binding": "PLM_DB",
+      "database_name": "plm-db",
+      "database_id": "8ac89f01-df9d-43ec-80d3-34df70c3b699"
+    }
+  ],
+  "kv_namespaces": [
+    {
+      "binding": "SESSIONS",
+      "id": "7658c8768e1647a3ba7f45bfe4bd4ede"
+    }
+  ],
+  "vars": {
+    "RP_NAME": "PLM",
+    "RP_ID": "plm.hen.ee",
+    "ORIGIN": "https://plm.hen.ee",
+    "JWT_SECRET": "fBWMIqeAs4AeZwS0YfH0BuaUoQQGP3WUSNmpFytGvo7cgaJpYjCDYmh8JPKsxRiP"
+  }
 }
