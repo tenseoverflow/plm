@@ -58,6 +58,7 @@ export type User = {
 };
 
 export type UiPreferences = {
+<<<<<<< Updated upstream
   showMindfulnessInWeek: boolean;
   soundEnabled: boolean;
   notificationsEnabled: boolean;
@@ -69,6 +70,34 @@ export type AuthState = {
   isAuthenticated: boolean;
   userId?: string;
   userName?: string;
+||||||| Stash base
+	showMindfulnessInWeek: boolean;
+	soundEnabled: boolean;
+	notificationsEnabled: boolean;
+	autoStartNextSegment: boolean;
+	focusDefaults: FocusDefaults;
+	// Passkey lock
+	passkeyEnabled?: boolean;
+	passkeyCredentialId?: string; // base64url
+=======
+	showMindfulnessInWeek: boolean;
+	soundEnabled: boolean;
+	notificationsEnabled: boolean;
+	autoStartNextSegment: boolean;
+	focusDefaults: FocusDefaults;
+	// Passkey lock
+	passkeyEnabled?: boolean;
+	passkeyCredentialId?: string; // base64url
+  // CalDAV
+  caldav?: {
+    enabled?: boolean;
+    baseUrl?: string;
+    username?: string;
+    password?: string; // stored locally only
+    lastSyncAt?: number;
+    mapping?: Record<string, { href: string; etag?: string | null } | undefined>; // taskId -> remote
+  };
+>>>>>>> Stashed changes
 };
 
 export type AppState = {
@@ -116,8 +145,20 @@ export type AppState = {
   skipHabitWeek: (habitId: string, weekStart: string) => void;
   unskipHabitWeek: (habitId: string, weekStart: string) => void;
 
+<<<<<<< Updated upstream
   setShowMindfulnessInWeek: (enabled: boolean) => void;
   setUi: (partial: Partial<UiPreferences>) => void;
+||||||| Stash base
+	setShowMindfulnessInWeek: (enabled: boolean) => void;
+	setUi: (partial: Partial<UiPreferences>) => void;
+	setLocked: (locked: boolean) => void;
+=======
+	setShowMindfulnessInWeek: (enabled: boolean) => void;
+	setUi: (partial: Partial<UiPreferences>) => void;
+	setLocked: (locked: boolean) => void;
+  // caldav actions
+  syncCaldav: () => Promise<void>;
+>>>>>>> Stashed changes
 
   // auth actions
   setAuth: (auth: Partial<AuthState>) => void;
@@ -243,6 +284,7 @@ const defaultFocusDefaults: FocusDefaults = {
 };
 
 export const useAppState = create<AppState>()(
+<<<<<<< Updated upstream
   persist(
     (set, get) => ({
       moodByDate: {},
@@ -265,6 +307,54 @@ export const useAppState = create<AppState>()(
         isAuthenticated: false,
       },
       user: null,
+||||||| Stash base
+	persist(
+		(set, _get) => ({
+			moodByDate: {},
+			intentionByDate: {},
+			tasksByDate: {},
+			journalByDate: {},
+			backlogTasks: [],
+			habits: [],
+			focusSessions: [],
+			quarterPlans: {},
+			weeklyReportsByWeekStart: {},
+			ui: {
+				showMindfulnessInWeek: true,
+				soundEnabled: true,
+				notificationsEnabled: true,
+				autoStartNextSegment: true,
+				focusDefaults: defaultFocusDefaults,
+				passkeyEnabled: false,
+				passkeyCredentialId: undefined,
+			},
+			locked: false,
+			user: null,
+=======
+	persist(
+		(set, _get) => ({
+			moodByDate: {},
+			intentionByDate: {},
+			tasksByDate: {},
+			journalByDate: {},
+			backlogTasks: [],
+			habits: [],
+			focusSessions: [],
+			quarterPlans: {},
+			weeklyReportsByWeekStart: {},
+			ui: {
+				showMindfulnessInWeek: true,
+				soundEnabled: true,
+				notificationsEnabled: true,
+				autoStartNextSegment: true,
+				focusDefaults: defaultFocusDefaults,
+				passkeyEnabled: false,
+				passkeyCredentialId: undefined,
+        caldav: { enabled: false },
+			},
+			locked: false,
+			user: null,
+>>>>>>> Stashed changes
 
       setMood: (date, mood) =>
         set((s) => ({ moodByDate: { ...s.moodByDate, [date]: mood } })),
@@ -437,6 +527,7 @@ export const useAppState = create<AppState>()(
         set((s) => ({ ui: { ...s.ui, showMindfulnessInWeek: enabled } })),
       setUi: (partial) => set((s) => ({ ui: { ...s.ui, ...partial } })),
 
+<<<<<<< Updated upstream
       setAuth: (authUpdate) =>
         set((s) => ({ auth: { ...s.auth, ...authUpdate } })),
       loginWithPasskey: (userId, userName) =>
@@ -461,6 +552,71 @@ export const useAppState = create<AppState>()(
           // Preserve current auth state (don't overwrite with server data)
           auth: current.auth,
         })),
+||||||| Stash base
+			registerUser: (name, credentialId) =>
+				set(() => ({
+					user: { id: generateId("user"), name: name.trim(), credentialId },
+				})),
+			logoutUser: () => set(() => ({ user: null })),
+=======
+      syncCaldav: async () => {
+        const s = _get();
+        const cfg = s.ui.caldav;
+        if (!cfg?.enabled || !cfg.baseUrl || !cfg.username) return;
+        const account = {
+          baseUrl: cfg.baseUrl,
+          auth: { username: cfg.username, password: cfg.password ?? "" },
+        };
+        const { listTodos, createOrUpdateTodo } = await import("@lib/caldav");
+        try {
+          const remoteList = await listTodos(account);
+          // Build reverse mapping remote href -> taskId
+          const map = { ...cfg.mapping } as Record<string, { href: string; etag?: string | null } | undefined>;
+          const hrefToTaskId = new Map<string, string>();
+          for (const [taskId, info] of Object.entries(map)) {
+            if (info?.href) hrefToTaskId.set(info.href, taskId);
+          }
+
+          // Import: create local tasks for unmapped remote todos (append to backlog)
+          const knownHrefs = new Set(Object.values(map).map((m) => m?.href).filter(Boolean) as string[]);
+          const backlog = [...s.backlogTasks];
+          for (const r of remoteList) {
+            if (!knownHrefs.has(r.href)) {
+              backlog.push({ id: generateId("task"), title: r.summary, done: r.completed });
+              // mapping stored without task placement; leave unmapped until user drags it onto a day
+            }
+          }
+
+          // Push: create remote for local tasks not yet mapped; update mapping
+          for (const [, tasks] of Object.entries(s.tasksByDate)) {
+            for (const t of tasks) {
+              const mapped = map[t.id];
+              if (!mapped) {
+                const saved = await createOrUpdateTodo(account, {
+                  href: "",
+                  summary: t.title,
+                  completed: t.done,
+                });
+                map[t.id] = { href: saved.href, etag: saved.etag };
+              }
+            }
+          }
+
+          set((state) => ({
+            backlogTasks: backlog,
+            ui: { ...state.ui, caldav: { ...state.ui.caldav, lastSyncAt: Date.now(), mapping: map } },
+          }));
+        } catch (e) {
+          console.error("CalDAV sync failed", e);
+        }
+      },
+
+			registerUser: (name, credentialId) =>
+				set(() => ({
+					user: { id: generateId("user"), name: name.trim(), credentialId },
+				})),
+			logoutUser: () => set(() => ({ user: null })),
+>>>>>>> Stashed changes
 
       registerUser: (name, credentialId) =>
         set(() => ({

@@ -1,3 +1,4 @@
+<<<<<<< Updated upstream
 import Button from "@components/ui/Button";
 import Input from "@components/ui/Input";
 import {
@@ -9,6 +10,19 @@ import {
 } from "@lib/webauthn";
 import { HabitSchedule, useAppState } from "@store/index";
 import { useRef, useState } from "react";
+||||||| Stash base
+import { useRef, useState } from 'react';
+import { HabitSchedule, useAppState } from '@store/index';
+import Input from '@components/ui/Input';
+import Button from '@components/ui/Button';
+import { startServerLogin, finishServerLogin, startServerRegistration, finishServerRegistration } from '@lib/webauthn';
+=======
+import Button from '@components/ui/Button';
+import Input from '@components/ui/Input';
+import { finishServerLogin, finishServerRegistration, startServerLogin, startServerRegistration } from '@lib/webauthn';
+import { HabitSchedule, useAppState } from '@store/index';
+import { useRef, useState } from 'react';
+>>>>>>> Stashed changes
 
 export default function Settings() {
   const state = useAppState();
@@ -18,10 +32,25 @@ export default function Settings() {
   const showMindfulness = useAppState((s) => s.ui.showMindfulnessInWeek);
   const setShowMindfulness = useAppState((s) => s.setShowMindfulnessInWeek);
 
+<<<<<<< Updated upstream
   const auth = useAppState((s) => s.auth);
   const loginWithPasskey = useAppState((s) => s.loginWithPasskey);
   const logout = useAppState((s) => s.logout);
   const loadServerData = useAppState((s) => s.loadServerData);
+||||||| Stash base
+    const ui = useAppState((s) => s.ui);
+    const setUi = useAppState((s) => s.setUi);
+    const setLocked = useAppState((s) => s.setLocked);
+    const registerUser = useAppState((s) => s.registerUser);
+    const logoutUser = useAppState((s) => s.logoutUser);
+=======
+    const ui = useAppState((s) => s.ui);
+    const setUi = useAppState((s) => s.setUi);
+    const setLocked = useAppState((s) => s.setLocked);
+    const syncCaldav = useAppState((s) => s.syncCaldav);
+    const registerUser = useAppState((s) => s.registerUser);
+    const logoutUser = useAppState((s) => s.logoutUser);
+>>>>>>> Stashed changes
 
   const ui = useAppState((s) => s.ui);
   const setUi = useAppState((s) => s.setUi);
@@ -96,6 +125,7 @@ export default function Settings() {
       // Start login (no name needed - passkey will identify the user)
       const { options, sessionId } = await startPasskeyLogin();
 
+<<<<<<< Updated upstream
       // Get credential
       const credential = (await navigator.credentials.get({
         publicKey: options,
@@ -179,6 +209,161 @@ export default function Settings() {
               <div className="text-sm">
                 <div className="font-medium text-green-700 dark:text-green-400">
                   ✓ Signed in as {auth.userName}
+||||||| Stash base
+            <section className="space-y-3">
+                <div className="text-sm text-neutral-500">Account</div>
+                <div className="space-y-3 rounded-md border border-neutral-200 p-3 dark:border-neutral-800">
+                    <div className="grid gap-2 sm:grid-cols-2">
+                        <div>
+                            <div className="text-xs text-neutral-500">Name</div>
+                            <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="Your name" />
+                        </div>
+                        <div>
+                            <div className="text-xs text-neutral-500">Email</div>
+                            <Input value={email} onChange={(e) => setEmail(e.target.value)} placeholder="you@example.com" />
+                        </div>
+                    </div>
+                    <div className="flex flex-wrap gap-2">
+                        <Button
+                            onClick={async () => {
+                                if (!email.trim() || !name.trim()) { alert('Enter name and email'); return; }
+                                setBusy(true);
+                                try {
+                                    const { userId, options } = await startServerRegistration(email.trim());
+                                    const cred = (await navigator.credentials.create({ publicKey: options })) as PublicKeyCredential | null;
+                                    if (!cred) throw new Error('Registration cancelled');
+                                    await finishServerRegistration(userId, email.trim(), cred);
+                                    registerUser(name.trim());
+                                    alert('Registered. You can now sign in with your passkey.');
+                                } catch (e: any) {
+                                    alert(e?.message ?? 'Registration failed');
+                                } finally { setBusy(false); }
+                            }}
+                            disabled={busy}
+                        >Register with passkey</Button>
+                        <Button
+                            variant="outline"
+                            onClick={async () => {
+                                if (!email.trim()) { alert('Enter email'); return; }
+                                setBusy(true);
+                                try {
+                                    const { userId, options } = await startServerLogin(email.trim());
+                                    const cred = (await navigator.credentials.get({ publicKey: options })) as PublicKeyCredential | null;
+                                    if (!cred) throw new Error('Cancelled');
+                                    await finishServerLogin(userId, email.trim(), cred);
+                                    setLocked(false);
+                                    alert('Signed in');
+                                } catch (e: any) {
+                                    alert(e?.message ?? 'Sign-in failed');
+                                } finally { setBusy(false); }
+                            }}
+                            disabled={busy}
+                        >Sign in with passkey</Button>
+                        <Button
+                            variant="ghost"
+                            onClick={async () => {
+                                try {
+                                    await fetch('/api/logout', { method: 'POST' });
+                                    logoutUser();
+                                    alert('Signed out');
+                                } catch { }
+                            }}
+                        >Sign out</Button>
+                    </div>
+=======
+            <section className="space-y-3">
+                <div className="text-sm text-neutral-500">CalDAV</div>
+                <div className="space-y-3 rounded-md border border-neutral-200 p-3 dark:border-neutral-800">
+                    <label className="flex items-center gap-2">
+                        <input type="checkbox" checked={ui.caldav?.enabled ?? false} onChange={(e) => setUi({ caldav: { ...ui.caldav, enabled: e.target.checked } })} />
+                        <span>Enable CalDAV sync for tasks</span>
+                    </label>
+                    {(ui.caldav?.enabled ?? false) && (
+                        <div className="grid gap-2 sm:grid-cols-2">
+                            <div>
+                                <div className="text-xs text-neutral-500">Calendar Base URL</div>
+                                <Input value={ui.caldav?.baseUrl ?? ''} onChange={(e) => setUi({ caldav: { ...ui.caldav, baseUrl: e.target.value } })} placeholder="https://cal.example.com/dav/user/calendars/todos/" />
+                            </div>
+                            <div>
+                                <div className="text-xs text-neutral-500">Username</div>
+                                <Input value={ui.caldav?.username ?? ''} onChange={(e) => setUi({ caldav: { ...ui.caldav, username: e.target.value } })} placeholder="user" />
+                            </div>
+                            <div>
+                                <div className="text-xs text-neutral-500">Password</div>
+                                <Input type="password" value={ui.caldav?.password ?? ''} onChange={(e) => setUi({ caldav: { ...ui.caldav, password: e.target.value } })} placeholder="••••••••" />
+                            </div>
+                            <div className="flex items-end">
+                                <Button onClick={() => syncCaldav()}>Sync now</Button>
+                            </div>
+                        </div>
+                    )}
+                    {ui.caldav?.lastSyncAt && (
+                        <div className="text-xs text-neutral-500">Last sync: {new Date(ui.caldav?.lastSyncAt).toLocaleString()}</div>
+                    )}
+                </div>
+            </section>
+
+            <section className="space-y-3">
+                <div className="text-sm text-neutral-500">Account</div>
+                <div className="space-y-3 rounded-md border border-neutral-200 p-3 dark:border-neutral-800">
+                    <div className="grid gap-2 sm:grid-cols-2">
+                        <div>
+                            <div className="text-xs text-neutral-500">Name</div>
+                            <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="Your name" />
+                        </div>
+                        <div>
+                            <div className="text-xs text-neutral-500">Email</div>
+                            <Input value={email} onChange={(e) => setEmail(e.target.value)} placeholder="you@example.com" />
+                        </div>
+                    </div>
+                    <div className="flex flex-wrap gap-2">
+                        <Button
+                            onClick={async () => {
+                                if (!email.trim() || !name.trim()) { alert('Enter name and email'); return; }
+                                setBusy(true);
+                                try {
+                                    const { userId, options } = await startServerRegistration(email.trim());
+                                    const cred = (await navigator.credentials.create({ publicKey: options })) as PublicKeyCredential | null;
+                                    if (!cred) throw new Error('Registration cancelled');
+                                    await finishServerRegistration(userId, email.trim(), cred);
+                                    registerUser(name.trim());
+                                    alert('Registered. You can now sign in with your passkey.');
+                                } catch (e: any) {
+                                    alert(e?.message ?? 'Registration failed');
+                                } finally { setBusy(false); }
+                            }}
+                            disabled={busy}
+                        >Register with passkey</Button>
+                        <Button
+                            variant="outline"
+                            onClick={async () => {
+                                if (!email.trim()) { alert('Enter email'); return; }
+                                setBusy(true);
+                                try {
+                                    const { userId, options } = await startServerLogin(email.trim());
+                                    const cred = (await navigator.credentials.get({ publicKey: options })) as PublicKeyCredential | null;
+                                    if (!cred) throw new Error('Cancelled');
+                                    await finishServerLogin(userId, email.trim(), cred);
+                                    setLocked(false);
+                                    alert('Signed in');
+                                } catch (e: any) {
+                                    alert(e?.message ?? 'Sign-in failed');
+                                } finally { setBusy(false); }
+                            }}
+                            disabled={busy}
+                        >Sign in with passkey</Button>
+                        <Button
+                            variant="ghost"
+                            onClick={async () => {
+                                try {
+                                    await fetch('/api/logout', { method: 'POST' });
+                                    logoutUser();
+                                    alert('Signed out');
+                                } catch { }
+                            }}
+                        >Sign out</Button>
+                    </div>
+>>>>>>> Stashed changes
                 </div>
                 <div className="mt-1 text-xs text-neutral-500">
                   Your data syncs automatically and is secured with your
