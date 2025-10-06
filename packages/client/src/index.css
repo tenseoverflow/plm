@@ -1,0 +1,72 @@
+@import "tailwindcss";
+
+@theme {
+  --color-calm-50: #f6fbf9;
+  --color-calm-100: #e7f7f2;
+  --color-calm-200: #c9ecdf;
+  --color-calm-300: #a5dfc7;
+  --color-calm-400: #7bceb0;
+  --color-calm-500: #58b79a;
+  --color-calm-600: #439681;
+  --color-calm-700: #37786b;
+  --color-calm-800: #2f6159;
+  --color-calm-900: #294f4b;
+  --font-family-sans:
+    Inter, ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, Cantarell, Noto Sans, Helvetica Neue, Arial, sans-serif;
+  --radius-lg: 0.75rem;
+  --radius-md: 0.5rem;
+  --radius-sm: 0.375rem;
+  --shadow-card:
+    0 1px 3px 0 rgba(0, 0, 0, 0.08), 0 1px 2px -1px rgba(0, 0, 0, 0.04);
+  --shadow-soft: 0 1px 2px 0 rgba(0, 0, 0, 0.06);
+  --ease-soft: cubic-bezier(0.2, 0.8, 0.2, 1);
+  --container-center: 1;
+  --container-padding: 1rem;
+  --container-padding-sm: 1.25rem;
+  --container-padding-lg: 2rem;
+  --container-padding-xl: 2.5rem;
+  --container-sm: 640px;
+  --container-md: 768px;
+  --container-lg: 1024px;
+  --container-xl: 1280px;
+}
+
+:root {
+  color-scheme: light dark;
+  --ring: 174 52% 58%; /* calm-400 approx in HSL */
+  --text-muted: 0 0% 45%;
+  --bg-soft: 0 0% 98%;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --text-muted: 0 0% 70%;
+    --bg-soft: 0 0% 8%;
+  }
+}
+
+/* Smooth focus outlines for accessibility */
+*:focus-visible {
+  outline: 2px solid hsl(var(--ring));
+  outline-offset: 2px;
+}
+
+body {
+  @apply bg-white text-neutral-900 antialiased dark:bg-neutral-950 dark:text-neutral-100;
+}
+
+/*************
+  Components
+**************/
+
+.container-soft {
+  @apply mx-auto max-w-4xl px-4 sm:px-5 lg:px-8;
+}
+
+.card-soft {
+  @apply rounded-xl border border-neutral-200 bg-white shadow-card dark:border-neutral-800 dark:bg-neutral-950;
+}
+
+.text-muted {
+  color: hsl(var(--text-muted));
+}

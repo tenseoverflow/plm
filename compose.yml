@@ -1,0 +1,47 @@
+version: "3.8"
+
+services:
+  db:
+    image: postgres:18-alpine
+    environment:
+      POSTGRES_DB: plm
+      POSTGRES_USER: plmuser
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-changeme}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    networks:
+      - plm_network
+
+  backend:
+    build:
+      context: .
+      dockerfile: packages/server/Dockerfile
+    depends_on:
+      db:
+        condition: service_started
+    environment:
+      DATABASE_URL: postgresql://plmuser:${DB_PASSWORD:-changeme}@db:5432/plm
+      NODE_ENV: production
+      PORT: 3000
+    networks:
+      - plm_network
+
+  frontend:
+    build:
+      context: .
+      dockerfile: packages/client/Dockerfile
+    depends_on:
+      - backend
+    ports:
+      - "3000:80"
+    networks:
+      - plm_network
+
+volumes:
+  postgres_data:
+
+networks:
+  plm_network:
+    driver: bridge

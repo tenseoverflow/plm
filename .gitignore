@@ -2,13 +2,16 @@
 node_modules/
 .pnpm/
 .yarn/
-package-lock.json
 pnpm-lock.yaml
 yarn.lock
+.bun
 
 # production
 dist/
 build/
+
+# generated files
+packages/client/src/generated/
 
 # misc
 .DS_Store
@@ -44,5 +47,8 @@ coverage/
 # output of various tools
 *.log
 
-.wrangler
-.dev.vars*
+# Database backups
+*.db
+*.db-*
+*.dump
+*.backup
